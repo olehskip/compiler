@@ -20,19 +20,17 @@ target_include_directories(${COMPILER_LIB_OUTPUT} PUBLIC ${MAGIC_ENUM_INCLUDES})
 add_executable(${COMPILER_OUTPUT} src/main.cpp)
 target_link_libraries(${COMPILER_OUTPUT} ${COMPILER_LIB_OUTPUT})
 
-/*
-set(FLEX_OUTPUT_NAME flex_output)
-set(FLEX_INPUT input.flex)
-set(FLEX_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/flex_input.yy.cpp)
-execute_process (
-	COMMAND bash -c "flex -o ${FLEX_SOURCES} ${FLEX_INPUT}"
-    RESULT_VARIABLE flex_ret
-	ERROR_VARIABLE flex_err
-)
-if(flex_ret EQUAL "1")
-	# TODO: add error
-endif()
-add_executable(${FLEX_OUTPUT_NAME} ${FLEX_SOURCES})
-target_include_directories(${FLEX_OUTPUT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/submodules/magic_enum/include")
-target_include_directories(${FLEX_OUTPUT_NAME} PRIVATE src)
-*/
+# set(FLEX_OUTPUT_NAME flex_output)
+# set(FLEX_INPUT input.flex)
+# set(FLEX_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/flex_input.yy.cpp)
+# execute_process (
+# 	COMMAND bash -c "flex -o ${FLEX_SOURCES} ${FLEX_INPUT}"
+#     RESULT_VARIABLE flex_ret
+# 	ERROR_VARIABLE flex_err
+# )
+# if(flex_ret EQUAL "1")
+# 	# TODO: add error
+# endif()
+# add_executable(${FLEX_OUTPUT_NAME} ${FLEX_SOURCES})
+# target_include_directories(${FLEX_OUTPUT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/submodules/magic_enum/include")
+# target_include_directories(${FLEX_OUTPUT_NAME} PRIVATE src)

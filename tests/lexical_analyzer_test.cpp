@@ -6,7 +6,7 @@ using namespace std;
 
 // ===== Group =====
 
-TEST(Group, RuleAndParseStrSame)
+TEST(Group, RuleAndParseSingleSameLetter)
 {
     LexicalAnalyzer lex;
     lex.addRule("1", Token::ASSIGN_OP);
@@ -164,66 +164,66 @@ TEST(Union, NestedUnions)
     EXPECT_EQ(parseRes[0], Token::ERROR);
 }
 
-// ===== Star =====
-TEST(Star, SimpleStar)
+// ===== Asterisk =====
+TEST(Asterisk, SimpleAsterisk)
 {
     LexicalAnalyzer lex;
-    lex.addRule("*1", Token::ASSIGN_OP);
+    lex.addRule("1*", Token::ASSIGN_OP);
     const auto parseRes = lex.parse("1111");
     ASSERT_EQ(parseRes.size(), 1);
     ASSERT_EQ(parseRes[0], Token::ASSIGN_OP);
 }
 
-TEST(Star, StarMatchesEmptyAndGroup)
+TEST(Asterisk, AsteriskMatchesEmptyAndGroup)
 {
     LexicalAnalyzer lex;
-    lex.addRule("*12", Token::ASSIGN_OP);
+    lex.addRule("1*2", Token::ASSIGN_OP);
     const auto parseRes = lex.parse("2");
     ASSERT_EQ(parseRes.size(), 1);
     ASSERT_EQ(parseRes[0], Token::ASSIGN_OP);
 }
 
-TEST(Star, StarMatchesMany)
+TEST(Asterisk, AsteriskMatchesMany)
 {
     LexicalAnalyzer lex;
-    lex.addRule("*1", Token::ASSIGN_OP);
+    lex.addRule("1*", Token::ASSIGN_OP);
     const auto parseRes = lex.parse("1111111");
     ASSERT_EQ(parseRes.size(), 1);
     ASSERT_EQ(parseRes[0], Token::ASSIGN_OP);
 }
 
-TEST(Star, StarMatchesManyAndGroup)
+TEST(Asterisk, AsteriskMatchesManyAndGroup)
 {
     LexicalAnalyzer lex;
-    lex.addRule("*12", Token::ASSIGN_OP);
+    lex.addRule("1*2", Token::ASSIGN_OP);
     const auto parseRes = lex.parse("1111112");
     ASSERT_EQ(parseRes.size(), 1);
     ASSERT_EQ(parseRes[0], Token::ASSIGN_OP);
 }
 
-TEST(Star, StarMatchFail)
+TEST(Asterisk, AsteriskMatchFail)
 {
     LexicalAnalyzer lex;
-    lex.addRule("*2", Token::ASSIGN_OP);
+    lex.addRule("2*", Token::ASSIGN_OP);
     const auto parseRes = lex.parse("111111111111111");
     ASSERT_EQ(parseRes.size(), 1);
     ASSERT_EQ(parseRes[0], Token::ERROR);
 }
 
-TEST(Star, StarMatchFailAndGroup)
+TEST(Asterisk, AsteriskMatchFailAndGroup)
 {
     LexicalAnalyzer lex;
-    lex.addRule("*23", Token::ASSIGN_OP);
+    lex.addRule("2*3", Token::ASSIGN_OP);
     const auto parseRes = lex.parse("111111111111111");
     ASSERT_EQ(parseRes.size(), 1);
     ASSERT_EQ(parseRes[0], Token::ERROR);
 }
 
-TEST(Star, GroupStar)
+TEST(Asterisk, GroupAsterisk)
 {
     LexicalAnalyzer lex;
     const std::string rule = "123456789";
-    lex.addRule("*(" + rule + ")", Token::ASSIGN_OP);
+    lex.addRule("(" + rule + ")*", Token::ASSIGN_OP);
 
     std::string ruleDuplicated;
     const size_t duplicatesCnt = 10;
@@ -237,11 +237,11 @@ TEST(Star, GroupStar)
     ASSERT_EQ(parseRes[0], Token::ASSIGN_OP);
 }
 
-TEST(Star, GroupStarMatchesAndFail)
+TEST(Asterisk, GroupAsteriskMatchesAndFail)
 {
     LexicalAnalyzer lex;
     const std::string rule = "123456789";
-    lex.addRule("*(" + rule + ")", Token::ASSIGN_OP);
+    lex.addRule("(" + rule + ")*", Token::ASSIGN_OP);
 
     std::string ruleDuplicated;
     const size_t duplicatesCnt = 10;
@@ -259,42 +259,42 @@ TEST(Star, GroupStarMatchesAndFail)
     ASSERT_EQ(parseRes.back(), Token::ERROR);
 }
 
-TEST(Star, TwoStars)
+TEST(Asterisk, TwoAsterisks)
 {
     LexicalAnalyzer lex;
-    lex.addRule("*2*3", Token::ASSIGN_OP);
+    lex.addRule("2*3*", Token::ASSIGN_OP);
     const auto parseRes = lex.parse("22222333333333333");
     ASSERT_EQ(parseRes.size(), 1);
     ASSERT_EQ(parseRes[0], Token::ASSIGN_OP);
 }
 
-TEST(Star, StarAndGroupMatchesLongest)
+TEST(Asterisk, AsteriskAndGroupMatchesLongest)
 {
     LexicalAnalyzer lex;
-    lex.addRule("*2", Token::BLANK);
-    lex.addRule("*2", Token::CLOSED_BRACKET);
-    lex.addRule("*21", Token::ASSIGN_OP);
+    lex.addRule("2*", Token::BLANK);
+    lex.addRule("2*", Token::CLOSED_BRACKET);
+    lex.addRule("2*1", Token::ASSIGN_OP);
     const auto parseRes = lex.parse("22222221");
     ASSERT_EQ(parseRes.size(), 1);
     ASSERT_EQ(parseRes[0], Token::ASSIGN_OP);
 }
 
-TEST(Star, TwoStarRulesFirstFails)
+TEST(Asterisk, TwoAsteriskRulesFirstFails)
 {
     LexicalAnalyzer lex;
-    lex.addRule("*3", Token::BLANK);
-    lex.addRule("*2", Token::ASSIGN_OP);
+    lex.addRule("3*", Token::BLANK);
+    lex.addRule("2*", Token::ASSIGN_OP);
     const auto parseRes = lex.parse("2222222");
     ASSERT_EQ(parseRes.size(), 1);
     ASSERT_EQ(parseRes[0], Token::ASSIGN_OP);
 }
 
-// ====== Star and Union ======
-TEST(StarAndUnion, StarMatchesEachCharFromUnion)
+// ====== Asterisk and Union ======
+TEST(AsteriskAndUnion, AsteriskMatchesEachCharFromUnion)
 {
     LexicalAnalyzer lex;
     const std::string rule = "123456789";
-    lex.addRule("*[" + rule + "]", Token::ASSIGN_OP);
+    lex.addRule("[" + rule + "]*", Token::ASSIGN_OP);
 
     std::string toParse;
     toParse.reserve(rule.size());

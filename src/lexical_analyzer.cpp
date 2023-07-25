@@ -1,8 +1,8 @@
 #include "lexical_analyzer.hpp"
 
+#include <exception>
 #include <iostream>
 #include <stack>
-#include <exception>
 
 #define eps '\0'
 
@@ -10,12 +10,12 @@ LexicalAnalyzer::LexicalAnalyzer() {}
 
 enum class SubregexType {
     GROUP, // (...)
-    UNION,  // [...]
-    STAR,
-    PLUS,
+    UNION, // [...]
     SIMPLE,
     ERROR
 };
+
+enum class QuantifierType { ASTERISK, PLUS, ERROR };
 
 struct Subregex {
     LexicalVertice *begin = nullptr, *end = nullptr;
@@ -33,7 +33,7 @@ static void addTransition(LexicalVertice *from, LexicalVertice *to, char transCh
 }
 
 // returns subregex type based on first char of the subregex
-static SubregexType getSubregexTypeByChar(char ch)
+static SubregexType getSubregexType(char ch)
 {
     if (isRegularChar(ch)) {
         return SubregexType::SIMPLE;
@@ -43,12 +43,21 @@ static SubregexType getSubregexTypeByChar(char ch)
             return SubregexType::GROUP;
         case '[':
             return SubregexType::UNION;
-        case '*':
-            return SubregexType::STAR;
-        case '+':
-            return SubregexType::PLUS;
+
         default:
             return SubregexType::ERROR;
+    }
+}
+
+static QuantifierType getQuantifierType(char ch)
+{
+    switch (ch) {
+        case '*':
+            return QuantifierType::ASTERISK;
+        case '+':
+            return QuantifierType::PLUS;
+        default:
+            return QuantifierType::ERROR;
     }
 }
 
@@ -64,89 +73,135 @@ constexpr static char getSubregexTypeEndChar(SubregexType subregexType)
     }
 }
 
-static Subregex processSubregex(std::string_view &ruleTail)
+static Subregex processSubregex(std::string_view &ruleTail);
+
+static void processAsteriskQuantifier(std::string_view &ruleTail, Subregex &subregex)
+{
+    ruleTail = ruleTail.substr(1);
+    auto newBegin = new LexicalVertice(), newEnd = new LexicalVertice();
+    addTransition(newBegin, subregex.begin, eps);
+    addTransition(newBegin, newEnd, eps);
+    addTransition(subregex.end, subregex.begin, eps);
+    addTransition(subregex.end, newEnd, eps);
+    subregex.begin = newBegin;
+    subregex.end = newEnd;
+}
+
+static void processPlusQuantifier(std::string_view &ruleTail, Subregex &subregex)
+{
+    ruleTail = ruleTail.substr(1);
+    auto newBegin = new LexicalVertice(), newEnd = new LexicalVertice();
+    addTransition(newBegin, subregex.begin, eps);
+    addTransition(subregex.end, subregex.begin, eps);
+    addTransition(subregex.end, newEnd, eps);
+    subregex.begin = newBegin;
+    subregex.end = newEnd;
+}
+
+static void processPossibleQuantifier(std::string_view &ruleTail, Subregex &subregex)
+{
+    if (ruleTail.empty()) {
+        return;
+    }
+    const auto quantifierType = getQuantifierType(ruleTail.at(0));
+    switch (quantifierType) {
+        case QuantifierType::ASTERISK:
+            processAsteriskQuantifier(ruleTail, subregex);
+            break;
+        case QuantifierType::PLUS:
+            processPlusQuantifier(ruleTail, subregex);
+            break;
+        default:
+            break;
+    }
+}
+
+static Subregex processSimpleSubregex(std::string_view &ruleTail)
 {
     const char currChar = ruleTail[0];
     ruleTail = ruleTail.substr(1);
-    const auto subregexType = getSubregexTypeByChar(currChar);
+    auto currSubregexBegin = new LexicalVertice(), currSubregexEnd = new LexicalVertice();
+    addTransition(currSubregexBegin, currSubregexEnd, currChar);
+    Subregex currSubregex{currSubregexBegin, currSubregexEnd, SubregexType::SIMPLE};
+    processPossibleQuantifier(ruleTail, currSubregex);
+    return currSubregex;
+}
+
+static Subregex processGroupSubregex(std::string_view &ruleTail)
+{
+    ruleTail = ruleTail.substr(1);
+    auto currSubregexBegin = new LexicalVertice(), currSubregexEnd = new LexicalVertice();
+    auto lastChildSubregexEnd = currSubregexBegin;
+    for (;;) {
+        if (ruleTail.empty()) {
+            return {nullptr, nullptr, SubregexType::ERROR};
+        }
+        else if (ruleTail.at(0) == getSubregexTypeEndChar(SubregexType::GROUP)) {
+            ruleTail = ruleTail.substr(1);
+            break;
+        }
+
+        auto childSubregex = processSubregex(ruleTail);
+        if (childSubregex.subregexType == SubregexType::ERROR) {
+            return {nullptr, nullptr, SubregexType::ERROR};
+        }
+        else {
+            addTransition(lastChildSubregexEnd, childSubregex.begin, eps);
+            lastChildSubregexEnd = childSubregex.end;
+        }
+    }
+
+    addTransition(lastChildSubregexEnd, currSubregexEnd, eps);
+    Subregex currSubregex{currSubregexBegin, currSubregexEnd, SubregexType::GROUP};
+    processPossibleQuantifier(ruleTail, currSubregex);
+    return currSubregex;
+}
+
+static Subregex processUnionSubregex(std::string_view &ruleTail)
+{
+    ruleTail = ruleTail.substr(1);
+    auto currSubregexBegin = new LexicalVertice(), currSubregexEnd = new LexicalVertice();
+    for (;;) {
+        if (ruleTail.empty()) {
+            return {nullptr, nullptr, SubregexType::ERROR};
+        }
+        else if (ruleTail.at(0) == getSubregexTypeEndChar(SubregexType::UNION)) {
+            ruleTail = ruleTail.substr(1);
+            break;
+        }
+
+        auto childSubregex = processSubregex(ruleTail);
+        if (childSubregex.subregexType == SubregexType::ERROR) {
+            return {nullptr, nullptr, SubregexType::ERROR};
+        }
+        else {
+            addTransition(currSubregexBegin, childSubregex.begin, eps);
+            addTransition(childSubregex.end, currSubregexEnd, eps);
+        }
+    }
+
+    Subregex currSubregex{currSubregexBegin, currSubregexEnd, SubregexType::UNION};
+    processPossibleQuantifier(ruleTail, currSubregex);
+    return currSubregex;
+}
+
+static Subregex processSubregex(std::string_view &ruleTail)
+{
+    if (ruleTail.empty()) {
+        return Subregex{nullptr, nullptr, SubregexType::ERROR};
+    }
+    const char currChar = ruleTail[0];
+    const auto subregexType = getSubregexType(currChar);
     switch (subregexType) {
-        case SubregexType::SIMPLE: {
-            auto currSubregexBegin = new LexicalVertice(), newSubregexEnd = new LexicalVertice();
-            addTransition(currSubregexBegin, newSubregexEnd, currChar);
-            return Subregex{currSubregexBegin, newSubregexEnd, SubregexType::SIMPLE};
-        } case SubregexType::GROUP: {
-            auto currSubregexBegin = new LexicalVertice(), currSubregexEnd = new LexicalVertice();
-            auto lastChildSubregexEnd = currSubregexBegin;
-            for (;;) {
-                if(ruleTail.empty()) {
-                    return {nullptr, nullptr, SubregexType::ERROR};
-                }
-                else if(ruleTail.at(0) == getSubregexTypeEndChar(SubregexType::GROUP)) {
-                    ruleTail = ruleTail.substr(1);
-                    break;
-                }
-
-                auto childSubregex = processSubregex(ruleTail);
-                if (childSubregex.subregexType == SubregexType::ERROR) {
-                    return {nullptr, nullptr, SubregexType::ERROR};
-                }
-                else {
-                    addTransition(lastChildSubregexEnd, childSubregex.begin, eps);
-                    lastChildSubregexEnd = childSubregex.end;
-                }
-            }
-
-            addTransition(lastChildSubregexEnd, currSubregexEnd, eps);
-            return Subregex{currSubregexBegin, currSubregexEnd, SubregexType::GROUP};
-        }
-        case SubregexType::UNION: {
-            auto currSubregexBegin = new LexicalVertice(), currSubregexEnd = new LexicalVertice();
-            for (;;) {
-                if(ruleTail.empty()) {
-                    return {nullptr, nullptr, SubregexType::ERROR};
-                }
-                else if(ruleTail.at(0) == getSubregexTypeEndChar(SubregexType::UNION)) {
-                    ruleTail = ruleTail.substr(1);
-                    break;
-                }
-
-                auto childSubregex = processSubregex(ruleTail);
-                if (childSubregex.subregexType == SubregexType::ERROR) {
-                    return {nullptr, nullptr, SubregexType::ERROR};
-                }
-                else {
-                    addTransition(currSubregexBegin, childSubregex.begin, eps);
-                    addTransition(childSubregex.end, currSubregexEnd, eps);
-                }
-            }
-
-            return Subregex{currSubregexBegin, currSubregexEnd, SubregexType::UNION};
-        }
-        case SubregexType::STAR: {
-            auto currSubregexBegin = new LexicalVertice(),
-                 currSubregexBeforeEnd = new LexicalVertice(),
-                 currSubregexEnd = new LexicalVertice();
-            auto childSubregex = processSubregex(ruleTail);
-            addTransition(currSubregexBegin, currSubregexEnd, eps);
-            addTransition(currSubregexBegin, childSubregex.begin, eps);
-            addTransition(currSubregexBeforeEnd, currSubregexBegin, eps);
-            addTransition(childSubregex.end, currSubregexBeforeEnd, eps);
-            return Subregex{currSubregexBegin, currSubregexEnd, SubregexType::STAR};
-        }
-        case SubregexType::PLUS: {
-            auto currSubregexBegin = new LexicalVertice(),
-                 currSubregexBeforeEnd = new LexicalVertice(),
-                 currSubregexEnd = new LexicalVertice();
-            auto childSubregex = processSubregex(ruleTail);
-            addTransition(currSubregexBegin, childSubregex.begin, eps);
-            addTransition(currSubregexBeforeEnd, currSubregexBegin, eps);
-            addTransition(childSubregex.end, currSubregexBeforeEnd, eps);
-            return Subregex{currSubregexBegin, currSubregexEnd, SubregexType::STAR};
-        }
+        case SubregexType::SIMPLE:
+            return processSimpleSubregex(ruleTail);
+        case SubregexType::GROUP:
+            return processGroupSubregex(ruleTail);
+        case SubregexType::UNION:
+            return processUnionSubregex(ruleTail);
         case SubregexType::ERROR:
-        default: {
+        default:
             return Subregex{nullptr, nullptr, SubregexType::ERROR};
-        }
     }
 }
 

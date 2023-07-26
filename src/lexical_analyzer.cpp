@@ -215,7 +215,7 @@ void LexicalAnalyzer::addRule(std::string rule, Token tokenToReturn)
     firstVertices.push_back({regex.begin, tokenToReturn});
 }
 
-std::pair<size_t, bool> matchMaxRule(std::string_view str, LexicalVertice *vertice)
+static std::pair<size_t, bool> matchMaxRule(std::string_view str, LexicalVertice *vertice)
 {
     bool isMatched = vertice->isAccepting;
     size_t mx = 0;

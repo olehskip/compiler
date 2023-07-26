@@ -6,11 +6,15 @@
 
 #include "tokens.hpp"
 
+class LexicalVertice;
+
+typedef std::pair<LexicalVertice *, char> Transition;
+
 class LexicalVertice {
   public:
     // friend class LexicalAnalyzer;
     // private:
-    std::vector<std::pair<LexicalVertice *, char>> transitions;
+    std::vector<Transition> transitions;
     bool isAccepting = false;
 };
 

@@ -289,6 +289,47 @@ TEST(Asterisk, TwoAsteriskRulesFirstFails)
     ASSERT_EQ(parseRes[0], Token::ASSIGN_OP);
 }
 
+// ====== Dot ======
+TEST(Dot, DotMatchesAnyChar)
+{
+    LexicalAnalyzer lex;
+    lex.addRule(".", Token::ASSIGN_OP);
+    const auto parseRes = lex.parse("2");
+    ASSERT_EQ(parseRes.size(), 1);
+    ASSERT_EQ(parseRes[0], Token::ASSIGN_OP);
+}
+
+TEST(Dot, DotMatchesOnlySingleChar)
+{
+    LexicalAnalyzer lex;
+    lex.addRule(".", Token::ASSIGN_OP);
+    const size_t ruleLength = 64;
+    std::string rule;
+    for (size_t i = 0; i < ruleLength; ++i) {
+        rule += to_string(i % 10);
+    }
+    const auto parseRes = lex.parse(rule);
+    ASSERT_EQ(parseRes.size(), ruleLength);
+    for (size_t i = 0; i < ruleLength; ++i) {
+        ASSERT_EQ(parseRes[i], Token::ASSIGN_OP);
+    }
+}
+
+// ====== Dot and Asterisk ======
+TEST(DotAndAsterisk, DotMatchesAnything)
+{
+    LexicalAnalyzer lex;
+    lex.addRule(".*", Token::ASSIGN_OP);
+    const size_t ruleLength = 64;
+    std::string rule;
+    for (size_t i = 0; i < ruleLength; ++i) {
+        rule += to_string(i % 10);
+    }
+    const auto parseRes = lex.parse(rule);
+    ASSERT_EQ(parseRes.size(), 1);
+    ASSERT_EQ(parseRes[0], Token::ASSIGN_OP);
+}
+
 // ====== Asterisk and Union ======
 TEST(AsteriskAndUnion, AsteriskMatchesEachCharFromUnion)
 {

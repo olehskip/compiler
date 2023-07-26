@@ -4,7 +4,7 @@
 #include <iostream>
 #include <stack>
 
-#define eps '\0'
+#define EPS '\0'
 
 LexicalAnalyzer::LexicalAnalyzer() {}
 
@@ -29,7 +29,7 @@ bool isRegularChar(char ch)
 
 static void addTransition(LexicalVertice *from, LexicalVertice *to, char transChar)
 {
-    from->transitions.push_back({to, transChar});
+    from->transitions.push_back(Transition{to, transChar});
 }
 
 // returns subregex type based on first char of the subregex
@@ -79,10 +79,10 @@ static void processAsteriskQuantifier(std::string_view &ruleTail, Subregex &subr
 {
     ruleTail = ruleTail.substr(1);
     auto newBegin = new LexicalVertice(), newEnd = new LexicalVertice();
-    addTransition(newBegin, subregex.begin, eps);
-    addTransition(newBegin, newEnd, eps);
-    addTransition(subregex.end, subregex.begin, eps);
-    addTransition(subregex.end, newEnd, eps);
+    addTransition(newBegin, subregex.begin, EPS);
+    addTransition(newBegin, newEnd, EPS);
+    addTransition(subregex.end, subregex.begin, EPS);
+    addTransition(subregex.end, newEnd, EPS);
     subregex.begin = newBegin;
     subregex.end = newEnd;
 }
@@ -91,9 +91,9 @@ static void processPlusQuantifier(std::string_view &ruleTail, Subregex &subregex
 {
     ruleTail = ruleTail.substr(1);
     auto newBegin = new LexicalVertice(), newEnd = new LexicalVertice();
-    addTransition(newBegin, subregex.begin, eps);
-    addTransition(subregex.end, subregex.begin, eps);
-    addTransition(subregex.end, newEnd, eps);
+    addTransition(newBegin, subregex.begin, EPS);
+    addTransition(subregex.end, subregex.begin, EPS);
+    addTransition(subregex.end, newEnd, EPS);
     subregex.begin = newBegin;
     subregex.end = newEnd;
 }
@@ -146,12 +146,12 @@ static Subregex processGroupSubregex(std::string_view &ruleTail)
             return {nullptr, nullptr, SubregexType::ERROR};
         }
         else {
-            addTransition(lastChildSubregexEnd, childSubregex.begin, eps);
+            addTransition(lastChildSubregexEnd, childSubregex.begin, EPS);
             lastChildSubregexEnd = childSubregex.end;
         }
     }
 
-    addTransition(lastChildSubregexEnd, currSubregexEnd, eps);
+    addTransition(lastChildSubregexEnd, currSubregexEnd, EPS);
     Subregex currSubregex{currSubregexBegin, currSubregexEnd, SubregexType::GROUP};
     processPossibleQuantifier(ruleTail, currSubregex);
     return currSubregex;
@@ -175,8 +175,8 @@ static Subregex processUnionSubregex(std::string_view &ruleTail)
             return {nullptr, nullptr, SubregexType::ERROR};
         }
         else {
-            addTransition(currSubregexBegin, childSubregex.begin, eps);
-            addTransition(childSubregex.end, currSubregexEnd, eps);
+            addTransition(currSubregexBegin, childSubregex.begin, EPS);
+            addTransition(childSubregex.end, currSubregexEnd, EPS);
         }
     }
 
@@ -219,12 +219,12 @@ std::pair<size_t, bool> matchMaxRule(std::string_view str, LexicalVertice *verti
 {
     bool isMatched = vertice->isAccepting;
     size_t mx = 0;
-    char currChar = str[0];
     for (auto &trans : vertice->transitions) {
-        if (trans.second == '\0' || (str.size() != 0 && trans.second == currChar)) {
-            const auto res = matchMaxRule(str.substr(trans.second == '\0' ? 0 : 1), trans.first);
+        if (trans.second == EPS ||
+            (str.size() > 0 && (trans.second == '.' || trans.second == str[0]))) {
+            const auto res = matchMaxRule(str.substr(trans.second != EPS), trans.first);
             if (res.second) {
-                mx = std::max(mx, (trans.second == '\0' ? 0 : 1) + res.first);
+                mx = std::max(mx, (trans.second != EPS) + res.first);
                 isMatched = true;
             }
         }

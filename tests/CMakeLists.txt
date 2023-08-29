@@ -1,4 +1,3 @@
-cmake_minimum_required(VERSION 3.0)
 project(CompilerTests)
 set(GTEST_PATH ${CMAKE_SOURCE_DIR}/submodules/googletest)
 

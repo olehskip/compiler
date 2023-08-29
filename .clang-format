@@ -9,3 +9,4 @@ BreakBeforeBraces: Stroustrup
 AllowShortFunctionsOnASingleLine: Empty
 InsertNewlineAtEOF: true
 IndentCaseLabels: true
+IndentAccessModifiers: true

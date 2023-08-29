@@ -205,7 +205,7 @@ static Subregex processSubregex(std::string_view &ruleTail)
     }
 }
 
-void LexicalAnalyzer::addRule(std::string rule, Token tokenToReturn)
+void LexicalAnalyzer::addRule(std::string rule, TerminalSymbol tokenToReturn)
 {
     rule = '(' + rule + ')';
     std::string_view ruleView = rule;
@@ -233,14 +233,14 @@ static std::pair<size_t, bool> matchMaxRule(std::string_view str, LexicalVertice
     return {isMatched ? mx : 0, isMatched};
 }
 
-std::vector<Token> LexicalAnalyzer::parse(std::string toParse)
+std::vector<TerminalSymbol> LexicalAnalyzer::parse(std::string toParse)
 {
-    std::vector<Token> tokens;
+    std::vector<TerminalSymbol> tokens;
     std::string_view view = toParse;
     size_t maxRuleMatched = 0;
     do {
         maxRuleMatched = 0;
-        Token currentToken = Token::ERROR;
+        TerminalSymbol currentToken = TerminalSymbol::ERROR;
         for (size_t ruleIndex = 0; ruleIndex < firstVertices.size(); ++ruleIndex) {
             const size_t curr = matchMaxRule(view, firstVertices[ruleIndex].first).first;
             if (curr > maxRuleMatched) {

@@ -1,10 +1,9 @@
-#ifndef LEXICAL_ANALYZER_H
-#define LEXICAL_ANALYZER_H
+#ifndef LEXICAL_ANALYZER_HPP
+#define LEXICAL_ANALYZER_HPP
 
 #include <string>
 #include <vector>
-
-#include "tokens.hpp"
+#include "symbols.hpp"
 
 class LexicalVertice;
 
@@ -22,12 +21,12 @@ class LexicalAnalyzer {
   public:
     LexicalAnalyzer();
 
-    void addRule(std::string rule, Token tokenToReturn);
+    void addRule(std::string rule, TerminalSymbol tokenToReturn);
 
-    std::vector<Token> parse(std::string toParse);
+    std::vector<TerminalSymbol> parse(std::string toParse);
 
 // private:
-    std::vector<std::pair<LexicalVertice *, Token>> firstVertices;
+    std::vector<std::pair<LexicalVertice *, TerminalSymbol>> firstVertices;
 };
 
-#endif // LEXICAL_ANALYZER_H
+#endif // LEXICAL_ANALYZER_HPP

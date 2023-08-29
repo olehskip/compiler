@@ -11,6 +11,7 @@ set(MAGIC_ENUM_INCLUDES "${PROJECT_SOURCE_DIR}/submodules/magic_enum/include")
 
 set(SOURCES 
 	src/lexical_analyzer.cpp
+	src/syntax_analyzer.cpp
 )
 
 add_library(${COMPILER_LIB_OUTPUT} STATIC ${SOURCES})

@@ -67,16 +67,5 @@ inline std::string getSymbolName(Symbol symbol)
 	return res;
 }
 
-inline std::string getTerminalSymbolName(TerminalSymbol terminalSymbol)
-{
-	return getSymbolName(Symbol(terminalSymbol));
-}
-
-inline std::string getNonTerminalSymbolName(TerminalSymbol nonTerminalSymbol)
-{
-	return getSymbolName(Symbol(nonTerminalSymbol));
-}
-
-
 #endif // SYMBOLS_H
 

@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <variant>
 
 #include "symbols.hpp"
 
@@ -32,27 +33,36 @@ public:
 using Items = std::vector<Item>;
 using ItemsSet = std::set<Item>;
 
-enum class DecisionType
-{
-    ERROR,
-    REDUCE,
-    SHIFT,
-    ACCEPT
-};
-
 class State;
 using StateShared = std::shared_ptr<State>;
 
-class Decision
+struct ErrorDecision
 {
-public:
-    // Decision(DecisionType tDecisionType, State *tState) = default;
-    // Decision &operator=(const Decision &anotherDecision) = default;
-    DecisionType decisionType;
-    StateShared state;
+};
+
+struct ReduceDecision
+{
     Symbol lhs = Symbol(NonTerminalSymbol::EPS); // TODO: remove it
     Symbols rhs = {}; // TODO: remove it
 };
+
+struct ShiftDecision
+{
+    StateShared state;
+};
+
+struct AcceptDecision
+{
+};
+
+using Decision = std::variant<ErrorDecision, ReduceDecision, ShiftDecision, AcceptDecision>;
+
+template<class T>
+std::optional<T> tryConvertDecision(const Decision &decision)
+{
+    const T *ret = std::get_if<T>(&decision);
+    return ret ? std::make_optional(*ret) : std::nullopt;
+}
 
 class State
 {

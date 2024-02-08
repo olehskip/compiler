@@ -1,6 +1,12 @@
 #include "lexical_analyzer.hpp"
 #include <iostream>
-#include "tokens.hpp"
+
+class A {
+    int b;
+    
+  public:
+    int a;
+};
 
 int main()
 {

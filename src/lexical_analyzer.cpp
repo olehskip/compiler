@@ -8,16 +8,23 @@
 
 LexicalAnalyzer::LexicalAnalyzer() {}
 
-enum class SubregexType {
+enum class SubregexType
+{
     GROUP, // (...)
     UNION, // [...]
     SIMPLE,
     ERROR
 };
 
-enum class QuantifierType { ASTERISK, PLUS, ERROR };
+enum class QuantifierType
+{
+    ASTERISK,
+    PLUS,
+    ERROR
+};
 
-struct Subregex {
+struct Subregex
+{
     LexicalVertice *begin = nullptr, *end = nullptr;
     SubregexType subregexType;
 };
@@ -135,8 +142,7 @@ static Subregex processGroupSubregex(std::string_view &ruleTail)
     for (;;) {
         if (ruleTail.empty()) {
             return {nullptr, nullptr, SubregexType::ERROR};
-        }
-        else if (ruleTail.at(0) == getSubregexTypeEndChar(SubregexType::GROUP)) {
+        } else if (ruleTail.at(0) == getSubregexTypeEndChar(SubregexType::GROUP)) {
             ruleTail = ruleTail.substr(1);
             break;
         }
@@ -144,8 +150,7 @@ static Subregex processGroupSubregex(std::string_view &ruleTail)
         auto childSubregex = processSubregex(ruleTail);
         if (childSubregex.subregexType == SubregexType::ERROR) {
             return {nullptr, nullptr, SubregexType::ERROR};
-        }
-        else {
+        } else {
             addTransition(lastChildSubregexEnd, childSubregex.begin, EPS);
             lastChildSubregexEnd = childSubregex.end;
         }
@@ -164,8 +169,7 @@ static Subregex processUnionSubregex(std::string_view &ruleTail)
     for (;;) {
         if (ruleTail.empty()) {
             return {nullptr, nullptr, SubregexType::ERROR};
-        }
-        else if (ruleTail.at(0) == getSubregexTypeEndChar(SubregexType::UNION)) {
+        } else if (ruleTail.at(0) == getSubregexTypeEndChar(SubregexType::UNION)) {
             ruleTail = ruleTail.substr(1);
             break;
         }
@@ -173,8 +177,7 @@ static Subregex processUnionSubregex(std::string_view &ruleTail)
         auto childSubregex = processSubregex(ruleTail);
         if (childSubregex.subregexType == SubregexType::ERROR) {
             return {nullptr, nullptr, SubregexType::ERROR};
-        }
-        else {
+        } else {
             addTransition(currSubregexBegin, childSubregex.begin, EPS);
             addTransition(childSubregex.end, currSubregexEnd, EPS);
         }

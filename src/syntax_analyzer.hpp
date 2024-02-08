@@ -18,7 +18,7 @@ public:
 
 using RulesSet = std::set<Rule>;
 
-class Item: public Rule
+class Item : public Rule
 {
 public:
     Item(Rule rule, size_t tPos, Symbol tLookaheadSymbol);
@@ -43,7 +43,7 @@ struct ErrorDecision
 struct ReduceDecision
 {
     Symbol lhs = Symbol(NonTerminalSymbol::EPS); // TODO: remove it
-    Symbols rhs = {}; // TODO: remove it
+    Symbols rhs = {};                            // TODO: remove it
 };
 
 struct ShiftDecision
@@ -57,7 +57,7 @@ struct AcceptDecision
 
 using Decision = std::variant<ErrorDecision, ReduceDecision, ShiftDecision, AcceptDecision>;
 
-template<class T>
+template <class T>
 std::optional<T> tryConvertDecision(const Decision &decision)
 {
     const T *ret = std::get_if<T>(&decision);
@@ -80,7 +80,6 @@ private:
     std::unordered_map<Symbol, Decision> decisionTable;
     std::unordered_map<Symbol, StateShared> gotoTable;
 };
-
 
 class SyntaxAnalyzer
 {

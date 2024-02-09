@@ -12,7 +12,7 @@ struct Rule
 public:
     auto operator<=>(const Rule &) const = default;
 
-    Symbol lhs;
+    Symbol lhs; // TODO: lhs can be only NonTerminalSymbol
     Symbols rhs;
 };
 
@@ -38,8 +38,8 @@ using StateShared = std::shared_ptr<State>;
 
 struct ReduceDecision
 {
-    Symbol lhs = Symbol(NonTerminalSymbol::EPS); // TODO: remove it
-    Symbols rhs = {};                            // TODO: remove it
+    Symbol lhs; // TODO: lhs can be only NonTerminalSymbol
+    Symbols rhs;
 };
 
 struct ShiftDecision

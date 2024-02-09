@@ -92,13 +92,13 @@ void SyntaxAnalyzer::parse(Symbols symbols)
         StateShared &currState = statesStack.top();
         auto decisionOpt = currState->getDecision(symbols[currSymbolPos]);
         if (!decisionOpt) {
-                        std::cerr << "Error during parsing. Can't find what to do. currSymbolPos = "
+            std::cerr << "Error during parsing. Can't find what to do. currSymbolPos = "
                       << currSymbolPos << "\n";
             abort();
         }
         auto decision = *decisionOpt;
 
-        if(auto reduceDecision = tryConvertDecision<ReduceDecision>(decision)) {
+        if (auto reduceDecision = tryConvertDecision<ReduceDecision>(decision)) {
             assert(statesStack.size() > reduceDecision->rhs.size());
             for (size_t i = 0; i < reduceDecision->rhs.size(); ++i) {
                 statesStack.pop();
@@ -107,24 +107,20 @@ void SyntaxAnalyzer::parse(Symbols symbols)
             StateShared nextState = statesStack.top()->getGotoState(reduceDecision->lhs);
             statesStack.push(nextState);
             break;
-        }
-        else if(auto shiftDecision = tryConvertDecision<ShiftDecision>(decision)) {
+        } else if (auto shiftDecision = tryConvertDecision<ShiftDecision>(decision)) {
             currSymbolPos++;
             statesStack.push(shiftDecision->state);
             break;
-        }
-        else if(auto acceptDecision = tryConvertDecision<ShiftDecision>(decision)) {
+        } else if (auto acceptDecision = tryConvertDecision<ShiftDecision>(decision)) {
             if (currSymbolPos + 1 == symbols.size()) {
                 std::cout << "Parsed\n";
-            }
-            else {
+            } else {
                 std::cerr << "Error during parsing. Found accept, but didn't read all symbols. "
                              "currSymbolPos = "
                           << currSymbolPos << "\n";
             }
             abort();
-        }
-        else {
+        } else {
             // this should never happen if we process all decision types
             std::cerr << "Error during parsing. A decision was not proccessed. currSymbolPos = "
                       << currSymbolPos << "\n";
@@ -191,8 +187,7 @@ SymbolsSet SyntaxAnalyzer::follow(Symbol symbol)
 
     if (symbol == startSymbol) {
         res = {endSymbol};
-    }
-    else {
+    } else {
         for (const auto &rule : allRulesSet) {
             for (size_t i = 0; i < rule.rhs.size(); ++i) {
                 if (rule.rhs[i] != symbol) {
@@ -201,14 +196,12 @@ SymbolsSet SyntaxAnalyzer::follow(Symbol symbol)
 
                 if (i == rule.rhs.size() - 1) {
                     res.merge(follow(rule.lhs));
-                }
-                else {
+                } else {
                     auto currFirst = first(rule.rhs[i + 1]);
                     res.merge(currFirst);
                     if (currFirst.find(EPS) != currFirst.end()) {
                         res.merge(follow(rule.lhs));
-                    }
-                    else {
+                    } else {
                         break;
                     }
                 }
@@ -275,11 +268,10 @@ void SyntaxAnalyzer::fillStateTables(const StateShared state)
                 std::cerr << "Conflict. Can't add reduction.\n";
                 abort();
             }
-            
+
             if (item.lhs == startSymbol) {
                 state->addDecision(item.lookaheadSymbol, AcceptDecision());
-            }
-            else {
+            } else {
                 state->addDecision(item.lookaheadSymbol, ReduceDecision{item.lhs, item.rhs});
             }
         }

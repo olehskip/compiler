@@ -36,10 +36,6 @@ using ItemsSet = std::set<Item>;
 class State;
 using StateShared = std::shared_ptr<State>;
 
-struct ErrorDecision
-{
-};
-
 struct ReduceDecision
 {
     Symbol lhs = Symbol(NonTerminalSymbol::EPS); // TODO: remove it
@@ -55,7 +51,7 @@ struct AcceptDecision
 {
 };
 
-using Decision = std::variant<ErrorDecision, ReduceDecision, ShiftDecision, AcceptDecision>;
+using Decision = std::variant<ReduceDecision, ShiftDecision, AcceptDecision>;
 
 template <class T>
 std::optional<T> tryConvertDecision(const Decision &decision)
@@ -68,7 +64,7 @@ class State
 {
 public:
     State(ItemsSet tItemsSet);
-    Decision getDecision(Symbol lookaheadSymbol);
+    std::optional<Decision> getDecision(Symbol lookaheadSymbol);
     void addDecision(Symbol lookaheadSymbol, Decision decision);
 
     StateShared getGotoState(Symbol lookaheadSymbol);

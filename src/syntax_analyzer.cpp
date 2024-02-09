@@ -21,11 +21,11 @@ Item::Item(Item item, size_t tPos) : pos(tPos), lookaheadSymbol(item.lookaheadSy
 
 State::State(ItemsSet tItemsSet) : itemsSet(tItemsSet) {}
 
-Decision State::getDecision(Symbol lookaheadSymbol)
+std::optional<Decision> State::getDecision(Symbol lookaheadSymbol)
 {
     const auto it = decisionTable.find(lookaheadSymbol);
     if (it == decisionTable.end()) {
-        return ErrorDecision();
+        return std::nullopt;
     }
 
     return it->second;
@@ -90,7 +90,13 @@ void SyntaxAnalyzer::parse(Symbols symbols)
     while (true) {
         assert(statesStack.size() > 0);
         StateShared &currState = statesStack.top();
-        auto decision = currState->getDecision(symbols[currSymbolPos]);
+        auto decisionOpt = currState->getDecision(symbols[currSymbolPos]);
+        if (!decisionOpt) {
+                        std::cerr << "Error during parsing. Can't find what to do. currSymbolPos = "
+                      << currSymbolPos << "\n";
+            abort();
+        }
+        auto decision = *decisionOpt;
 
         if(auto reduceDecision = tryConvertDecision<ReduceDecision>(decision)) {
             assert(statesStack.size() > reduceDecision->rhs.size());
@@ -119,7 +125,8 @@ void SyntaxAnalyzer::parse(Symbols symbols)
             abort();
         }
         else {
-            std::cerr << "Error during parsing. Can't find what to do. currSymbolPos = "
+            // this should never happen if we process all decision types
+            std::cerr << "Error during parsing. A decision was not proccessed. currSymbolPos = "
                       << currSymbolPos << "\n";
             abort();
         }
@@ -264,8 +271,7 @@ void SyntaxAnalyzer::fillStateTables(const StateShared state)
     // add reductions
     for (auto &item : state->itemsSet) {
         if (item.pos == item.rhs.size()) {
-            const auto existedDecision = state->getDecision(item.lookaheadSymbol);
-            if (!tryConvertDecision<ErrorDecision>(existedDecision)) {
+            if (!state->getDecision(item.lookaheadSymbol)) {
                 std::cerr << "Conflict. Can't add reduction.\n";
                 abort();
             }
@@ -285,7 +291,7 @@ void SyntaxAnalyzer::fillStateTables(const StateShared state)
         if (destStateItems.empty()) {
             continue;
         }
-        if (!tryConvertDecision<ErrorDecision>(state->getDecision(symbol))) {
+        if (!state->getDecision(symbol)) {
             std::cerr << "Conflict. Can't add shift.\n";
             abort();
         }

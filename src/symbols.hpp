@@ -78,11 +78,14 @@ using SymbolsAst = std::vector<SymbolAst::SharedPtr>;
 class TerminalSymbolAst : public SymbolAst
 {
 public:
-    TerminalSymbolAst(TerminalSymbol symbolType_, std::string text_) : symbolType(symbolType_), text(std::move(text_)) {}
+    TerminalSymbolAst(TerminalSymbol symbolType_, std::string text_)
+        : symbolType(symbolType_), text(std::move(text_))
+    {
+    }
 
     const TerminalSymbol symbolType;
     const std::string text;
-    
+
     using SharedPtr = std::shared_ptr<TerminalSymbolAst>;
 };
 
@@ -97,4 +100,3 @@ public:
 };
 
 #endif // SYMBOLS_H
-

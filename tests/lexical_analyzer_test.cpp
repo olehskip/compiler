@@ -93,7 +93,7 @@ TEST(Group, SingleRuleNested32Times)
 {
     LexicalAnalyzer lex;
     std::string rule = "12";
-    for(size_t i = 0; i < 32; ++i) {
+    for (size_t i = 0; i < 32; ++i) {
         rule = '(' + rule + ')';
     }
     lex.addRule(rule, TerminalSymbol::ASSIGN_OP);
@@ -107,7 +107,7 @@ TEST(Group, SingleRuleNested256Times)
 {
     LexicalAnalyzer lex;
     std::string rule = "12";
-    for(size_t i = 0; i < 256; ++i) {
+    for (size_t i = 0; i < 256; ++i) {
         rule = '(' + rule + ')';
     }
     lex.addRule(rule, TerminalSymbol::ASSIGN_OP);
@@ -131,7 +131,7 @@ TEST(Group, TwoGroupsNested32Times)
 {
     LexicalAnalyzer lex;
     std::string rule = "(12)(34)";
-    for(size_t i = 0; i < 32; ++i) {
+    for (size_t i = 0; i < 32; ++i) {
         rule = '(' + rule + ')';
     }
     lex.addRule(rule, TerminalSymbol::ASSIGN_OP);
@@ -305,7 +305,7 @@ TEST(Asterisk, TwoAsterisks)
 {
     LexicalAnalyzer lex;
     lex.addRule("2*3*", TerminalSymbol::ASSIGN_OP);
-    const std::string toParse = "22222333333333333"; 
+    const std::string toParse = "22222333333333333";
     const auto parseRes = lex.parse(toParse);
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
@@ -361,7 +361,7 @@ TEST(Dot, DotMatchesOnlySingleChar)
     ASSERT_EQ(parseRes.size(), toParseLength);
     for (size_t i = 0; i < toParseLength; ++i) {
         EXPECT_EQ(parseRes[i]->symbolType, TerminalSymbol::ASSIGN_OP);
-        EXPECT_EQ(parseRes[i]->text, std::string(1, toParse[i])); 
+        EXPECT_EQ(parseRes[i]->text, std::string(1, toParse[i]));
     }
 }
 
@@ -401,7 +401,8 @@ TEST(AsteriskAndUnion, AsteriskMatchesEachCharFromUnion)
 }
 
 // ====== Real tokens ======
-class RealTokens: public ::testing::Test {
+class RealTokens : public ::testing::Test
+{
 protected:
     void SetUp() override
     {
@@ -413,14 +414,15 @@ protected:
 
 TEST_F(RealTokens, IntegersWithSemicolons)
 {
-    const vector<std::string> integers = {"0", "1", "22", "333", "4444", "55555", "6", "77", "888", "9999"};
+    const vector<std::string> integers = {"0",     "1", "22", "333", "4444",
+                                          "55555", "6", "77", "888", "9999"};
     std::string toParse;
-    for(auto integer : integers) {
+    for (auto integer : integers) {
         toParse += integer + ";";
     }
     const auto parseRes = lex.parse(toParse);
     ASSERT_EQ(parseRes.size() % 2, 0);
-    for(size_t i = 0; i < parseRes.size(); i += 2) { 
+    for (size_t i = 0; i < parseRes.size(); i += 2) {
         EXPECT_EQ(parseRes[i]->symbolType, TerminalSymbol::NUM_LIT);
         EXPECT_EQ(parseRes[i]->text, integers[i / 2]);
         EXPECT_EQ(parseRes[i + 1]->symbolType, TerminalSymbol::SEMICOLON);
@@ -428,7 +430,7 @@ TEST_F(RealTokens, IntegersWithSemicolons)
     }
 }
 
-int main(int argc, char **argv)
+int main(int argc, char **argv
 {
     ::testing::InitGoogleTest(&argc, argv);
 

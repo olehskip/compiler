@@ -68,8 +68,11 @@ inline std::string getSymbolName(Symbol symbol)
     return res;
 }
 
-struct SymbolAst
+class SymbolAst
 {
+public:
+    virtual ~SymbolAst() {};
+
     using SharedPtr = std::shared_ptr<SymbolAst>;
 };
 
@@ -82,6 +85,7 @@ public:
         : symbolType(symbolType_), text(std::move(text_))
     {
     }
+    ~TerminalSymbolAst() {}
 
     const TerminalSymbol symbolType;
     const std::string text;
@@ -94,9 +98,16 @@ using TerminalSymbolsAst = std::vector<TerminalSymbolAst::SharedPtr>;
 class NonTerminalSymbolAst : public SymbolAst
 {
 public:
-    NonTerminalSymbolAst(NonTerminalSymbol symbolType_) : symbolType(symbolType_) {}
+    NonTerminalSymbolAst(NonTerminalSymbol symbolType_, SymbolsAst children_)
+        : symbolType(symbolType_), children(children_)
+    {
+    }
+    ~NonTerminalSymbolAst() {}
+
     const NonTerminalSymbol symbolType;
     SymbolsAst children;
+
+    using SharedPtr = std::shared_ptr<NonTerminalSymbolAst>;
 };
 
 #endif // SYMBOLS_H

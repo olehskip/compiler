@@ -12,7 +12,7 @@ struct Rule
 public:
     auto operator<=>(const Rule &) const = default;
 
-    Symbol lhs; // TODO: lhs can be only NonTerminalSymbol
+    NonTerminalSymbol lhs;
     Symbols rhs;
 };
 
@@ -33,25 +33,39 @@ public:
 using Items = std::vector<Item>;
 using ItemsSet = std::set<Item>;
 
-class State;
-using StateShared = std::shared_ptr<State>;
+struct ReduceDecision;
+struct ShiftDecision;
+using Decision = std::variant<ReduceDecision, ShiftDecision>;
+
+class State
+{
+public:
+    using SharedPtr = std::shared_ptr<State>;
+
+    State(ItemsSet tItemsSet);
+    std::optional<Decision> getDecision(Symbol lookaheadSymbol);
+    void addDecision(Symbol lookaheadSymbol, Decision decision);
+
+    SharedPtr getGotoState(Symbol lookaheadSymbol);
+    void addGotoState(Symbol lookaheadSymbol, SharedPtr state);
+
+    ItemsSet itemsSet;
+
+private:
+    std::unordered_map<Symbol, Decision> decisionTable;
+    std::unordered_map<Symbol, SharedPtr> gotoTable;
+};
 
 struct ReduceDecision
 {
-    Symbol lhs; // TODO: lhs can be only NonTerminalSymbol
+    NonTerminalSymbol lhs;
     Symbols rhs;
 };
 
 struct ShiftDecision
 {
-    StateShared state;
+    State::SharedPtr state;
 };
-
-struct AcceptDecision
-{
-};
-
-using Decision = std::variant<ReduceDecision, ShiftDecision, AcceptDecision>;
 
 template <class T>
 std::optional<T> tryConvertDecision(const Decision &decision)
@@ -59,23 +73,6 @@ std::optional<T> tryConvertDecision(const Decision &decision)
     const T *ret = std::get_if<T>(&decision);
     return ret ? std::make_optional(*ret) : std::nullopt;
 }
-
-class State
-{
-public:
-    State(ItemsSet tItemsSet);
-    std::optional<Decision> getDecision(Symbol lookaheadSymbol);
-    void addDecision(Symbol lookaheadSymbol, Decision decision);
-
-    StateShared getGotoState(Symbol lookaheadSymbol);
-    void addGotoState(Symbol lookaheadSymbol, StateShared state);
-
-    ItemsSet itemsSet;
-
-private:
-    std::unordered_map<Symbol, Decision> decisionTable;
-    std::unordered_map<Symbol, StateShared> gotoTable;
-};
 
 class SyntaxAnalyzer
 {
@@ -85,7 +82,7 @@ public:
     void addRule(NonTerminalSymbol lhs, Symbols rhsSymbols);
 
     void start();
-    void parse(Symbols symbols);
+    NonTerminalSymbolAst::SharedPtr parse(TerminalSymbolsAst symbols);
 
 private:
     SymbolsSet first(Symbol symbol);
@@ -94,14 +91,14 @@ private:
     ItemsSet closure(const ItemsSet &items);
     ItemsSet gotoItems(const ItemsSet &itemSet, Symbol symbol);
 
-    void fillStateTables(const StateShared state);
+    void fillStateTables(const State::SharedPtr state);
 
     RulesSet allRulesSet;
     ItemsSet allItemsSet;
-    StateShared startState;
-    std::vector<StateShared> allStates;
+    State::SharedPtr startState;
+    std::vector<State::SharedPtr> allStates;
 
-    Symbol startSymbol;
+    NonTerminalSymbol startSymbol;
     Symbol endSymbol;
     std::set<Symbol> allSymbols;
 
@@ -109,3 +106,4 @@ private:
 };
 
 #endif // SYNTAX_ANALYZER_HPP
+

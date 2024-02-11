@@ -37,7 +37,7 @@ void State::addDecision(Symbol lookaheadSymbol, Decision decision)
     decisionTable[lookaheadSymbol] = decision;
 }
 
-StateShared State::getGotoState(Symbol lookaheadSymbol)
+State::SharedPtr State::getGotoState(Symbol lookaheadSymbol)
 {
     const auto it = gotoTable.find(lookaheadSymbol);
     if (it == gotoTable.end()) {
@@ -47,7 +47,7 @@ StateShared State::getGotoState(Symbol lookaheadSymbol)
     return it->second;
 }
 
-void State::addGotoState(Symbol lookaheadSymbol, StateShared state)
+void State::addGotoState(Symbol lookaheadSymbol, State::SharedPtr state)
 {
     assert(gotoTable.find(lookaheadSymbol) == gotoTable.end());
     gotoTable[lookaheadSymbol] = state;
@@ -81,49 +81,54 @@ void SyntaxAnalyzer::start()
     fillStateTables(startState);
 }
 
-void SyntaxAnalyzer::parse(Symbols symbols)
+NonTerminalSymbolAst::SharedPtr SyntaxAnalyzer::parse(TerminalSymbolsAst symbols)
 {
-    std::stack<StateShared> statesStack;
-    statesStack.push(startState);
+    std::stack<std::pair<State::SharedPtr, SymbolAst::SharedPtr>> statesStack;
+    statesStack.push({startState, nullptr});
     size_t currSymbolPos = 0;
 
     while (true) {
         assert(statesStack.size() > 0);
         assert(currSymbolPos < symbols.size());
-        StateShared &currState = statesStack.top();
-        auto decisionOpt = currState->getDecision(symbols[currSymbolPos]);
+        State::SharedPtr &currState = statesStack.top().first;
+        auto decisionOpt = currState->getDecision(symbols[currSymbolPos]->symbolType);
         if (!decisionOpt) {
             std::cerr << "Error during parsing. Can't find what to do. currSymbolPos = "
                       << currSymbolPos << "\n";
-            abort();
+            return nullptr;
         }
         auto decision = *decisionOpt;
 
         if (auto reduceDecision = tryConvertDecision<ReduceDecision>(decision)) {
             assert(statesStack.size() > reduceDecision->rhs.size());
+            SymbolsAst symbolsChildren;
             for (size_t i = 0; i < reduceDecision->rhs.size(); ++i) {
+                assert(statesStack.top().second);
+                symbolsChildren.push_back(statesStack.top().second);
                 statesStack.pop();
             }
 
-            StateShared nextState = statesStack.top()->getGotoState(reduceDecision->lhs);
-            statesStack.push(nextState);
-        } else if (auto shiftDecision = tryConvertDecision<ShiftDecision>(decision)) {
-            currSymbolPos++;
-            statesStack.push(shiftDecision->state);
-        } else if (auto acceptDecision = tryConvertDecision<AcceptDecision>(decision)) {
-            if (currSymbolPos + 1 == symbols.size()) {
-                std::cout << "Parsed\n";
-            } else {
-                std::cerr << "Error during parsing. Found accept, but didn't read all symbols. "
-                             "currSymbolPos = "
-                          << currSymbolPos << "\n";
+            std::reverse(symbolsChildren.begin(), symbolsChildren.end());
+            NonTerminalSymbolAst::SharedPtr newSymbolAst =
+                std::make_shared<NonTerminalSymbolAst>(reduceDecision->lhs, symbolsChildren);
+            if (reduceDecision->lhs == startSymbol) {
+                assert(statesStack.size() == 1);
+                assert(currSymbolPos == symbols.size() - 1);
+                return newSymbolAst;
             }
-            break;
+            assert(statesStack.size() > 0);
+            auto nextState = statesStack.top().first->getGotoState(reduceDecision->lhs);
+            statesStack.push({nextState, newSymbolAst});
+        } else if (auto shiftDecision = tryConvertDecision<ShiftDecision>(decision)) {
+            TerminalSymbolAst::SharedPtr newSymbolAst = std::make_shared<TerminalSymbolAst>(
+                symbols[currSymbolPos]->symbolType, symbols[currSymbolPos]->text);
+            statesStack.push({shiftDecision->state, newSymbolAst});
+            currSymbolPos++;
         } else {
             // this should never happen if we process all decision types
             std::cerr << "Error during parsing. A decision was not proccessed. currSymbolPos = "
                       << currSymbolPos << "\n";
-            abort();
+            return nullptr;
         }
     }
 }
@@ -158,7 +163,7 @@ SymbolsSet SyntaxAnalyzer::first(Symbol symbol)
     SymbolsSet res;
 
     for (const auto &rule : allRulesSet) {
-        if (rule.lhs != symbol) {
+        if (Symbol(rule.lhs) != symbol) {
             continue;
         }
         for (auto rhsSymbol : rule.rhs) {
@@ -184,7 +189,7 @@ SymbolsSet SyntaxAnalyzer::follow(Symbol symbol)
     mFollowCache[symbol] = {}; // to prevent infinite recursion
     SymbolsSet res;
 
-    if (symbol == startSymbol) {
+    if (symbol == Symbol(startSymbol)) {
         res = {endSymbol};
     } else {
         for (const auto &rule : allRulesSet) {
@@ -230,7 +235,7 @@ ItemsSet SyntaxAnalyzer::closure(const ItemsSet &itemsSet)
         const auto lookaheadSymbols = first(itemTail);
 
         for (const auto &rule : allRulesSet) {
-            if (rule.lhs != itemCurrSymbol) {
+            if (Symbol(rule.lhs) != itemCurrSymbol) {
                 continue;
             }
 
@@ -257,9 +262,8 @@ ItemsSet SyntaxAnalyzer::gotoItems(const ItemsSet &itemsSet, Symbol symbol)
     return closure(resSet);
 }
 
-void SyntaxAnalyzer::fillStateTables(const StateShared state)
+void SyntaxAnalyzer::fillStateTables(const State::SharedPtr state)
 {
-    std::cout << "fill\n";
     // add reductions
     for (auto &item : state->itemsSet) {
         if (item.pos == item.rhs.size()) {
@@ -268,12 +272,7 @@ void SyntaxAnalyzer::fillStateTables(const StateShared state)
                 abort();
             }
 
-            if (item.lhs == startSymbol) {
-                // TODO: add check whether lookaheadSymbol is endSymbol
-                state->addDecision(item.lookaheadSymbol, AcceptDecision());
-            } else {
-                state->addDecision(item.lookaheadSymbol, ReduceDecision{item.lhs, item.rhs});
-            }
+            state->addDecision(item.lookaheadSymbol, ReduceDecision{item.lhs, item.rhs});
         }
     }
 

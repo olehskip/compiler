@@ -23,7 +23,7 @@ class LexicalAnalyzer {
 
     void addRule(std::string rule, TerminalSymbol tokenToReturn);
 
-    std::vector<TerminalSymbol> parse(std::string toParse);
+    TerminalSymbolsAst parse(std::string toParse);
 
 // private:
     std::vector<std::pair<LexicalVertice *, TerminalSymbol>> firstVertices;

@@ -430,7 +430,7 @@ TEST_F(RealTokens, IntegersWithSemicolons)
     }
 }
 
-int main(int argc, char **argv
+int main(int argc, char **argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
 

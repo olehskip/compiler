@@ -71,7 +71,7 @@ inline std::string getSymbolName(Symbol symbol)
 class SymbolAst
 {
 public:
-    virtual ~SymbolAst() {};
+    virtual ~SymbolAst(){};
 
     using SharedPtr = std::shared_ptr<SymbolAst>;
 };

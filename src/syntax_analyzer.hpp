@@ -106,4 +106,3 @@ private:
 };
 
 #endif // SYNTAX_ANALYZER_HPP
-

@@ -17,7 +17,8 @@ void astPrinter(SymbolAst::SharedPtr symbolAst, std::string prefix)
     if (auto terminalSymbol = std::dynamic_pointer_cast<TerminalSymbolAst>(symbolAst)) {
         std::cout << "<" << getSymbolName(terminalSymbol->symbolType) << "|" << terminalSymbol->text
                   << ">";
-    } else if (auto nonTerminalSymbol = std::dynamic_pointer_cast<NonTerminalSymbolAst>(symbolAst)) {
+    } else if (auto nonTerminalSymbol =
+                   std::dynamic_pointer_cast<NonTerminalSymbolAst>(symbolAst)) {
         for (auto child : nonTerminalSymbol->children) {
             std::cout << getSymbolName(nonTerminalSymbol->symbolType) << "; ";
             astPrinter(child, prefix + "-");

@@ -3,13 +3,31 @@
 
 #include "symbols.hpp"
 
+class LexicalAnalyzer;
+struct LexicalVertice;
+using Transition = std::pair<LexicalVertice *, char>;
+
+class LexicalAnalyzerConstructor
+{
+public:
+    virtual ~LexicalAnalyzerConstructor() = 0;
+
+    virtual void addRule(std::string rule, TerminalSymbol tokenToReturn) = 0;
+
+protected:
+    friend LexicalAnalyzer;
+    std::vector<std::pair<LexicalVertice *, TerminalSymbol>> firstVertices;
+};
+
 class LexicalAnalyzer
 {
 public:
-    virtual ~LexicalAnalyzer() = 0;
+    LexicalAnalyzer(std::shared_ptr<LexicalAnalyzerConstructor> constructor_);
 
-    virtual void addRule(std::string rule, TerminalSymbol tokenToReturn) = 0;
-    virtual TerminalSymbolsAst parse(std::string toParse) = 0;
+    TerminalSymbolsAst parse(std::string toParse);
+
+private:
+    const std::shared_ptr<LexicalAnalyzerConstructor> constructor;
 };
 
 #endif // LEXICAL_ANALYZER_HPP

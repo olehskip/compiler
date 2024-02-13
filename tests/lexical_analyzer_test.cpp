@@ -1,4 +1,4 @@
-#include "lexical_analyzer/thompson_analyzer.hpp"
+#include "lexical_analyzer/thompson_constructor.hpp"
 #include <gtest/gtest.h>
 #include <string>
 
@@ -8,9 +8,9 @@ using namespace std;
 
 TEST(Group, RuleAndParseSingleSameLetter)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("1", TerminalSymbol::ASSIGN_OP);
-    const auto parseRes = lex.parse("1");
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("1", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("1");
     ASSERT_EQ(parseRes.size(), 1);
     ASSERT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     ASSERT_EQ(parseRes[0]->text, "1");
@@ -18,9 +18,9 @@ TEST(Group, RuleAndParseSingleSameLetter)
 
 TEST(Group, RuleAndParseStrDifferent)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("1111111", TerminalSymbol::ASSIGN_OP);
-    const auto parseRes = lex.parse("22");
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("1111111", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("22");
     ASSERT_EQ(parseRes.size(), 1);
     ASSERT_EQ(parseRes[0]->symbolType, TerminalSymbol::ERROR);
     ASSERT_EQ(parseRes[0]->text, "");
@@ -28,9 +28,9 @@ TEST(Group, RuleAndParseStrDifferent)
 
 TEST(Group, RuleMatchesSeveralTimes)
 {
-    ThompsonAnalyzer lex;
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
     const std::string rule = "12";
-    lex.addRule(rule, TerminalSymbol::ASSIGN_OP);
+    lexConstructor->addRule(rule, TerminalSymbol::ASSIGN_OP);
 
     std::string ruleDuplicated;
     const size_t duplicatesCnt = 10;
@@ -38,7 +38,7 @@ TEST(Group, RuleMatchesSeveralTimes)
     for (size_t i = 0; i < duplicatesCnt; ++i) {
         ruleDuplicated += rule;
     }
-    const auto parseRes = lex.parse(ruleDuplicated);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(ruleDuplicated);
 
     EXPECT_EQ(parseRes.size(), duplicatesCnt);
     for (auto token : parseRes) {
@@ -49,10 +49,10 @@ TEST(Group, RuleMatchesSeveralTimes)
 
 TEST(Group, TwoRulesFirstFails)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("222", TerminalSymbol::BLANK);
-    lex.addRule("11", TerminalSymbol::ASSIGN_OP);
-    const auto parseRes = lex.parse("11");
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("222", TerminalSymbol::BLANK);
+    lexConstructor->addRule("11", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("11");
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, "11");
@@ -60,10 +60,10 @@ TEST(Group, TwoRulesFirstFails)
 
 TEST(Group, TwoRulesMatchLongest)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("11", TerminalSymbol::BLANK);
-    lex.addRule("1111", TerminalSymbol::ASSIGN_OP);
-    const auto parseRes = lex.parse("1111");
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("11", TerminalSymbol::BLANK);
+    lexConstructor->addRule("1111", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("1111");
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, "1111");
@@ -71,9 +71,9 @@ TEST(Group, TwoRulesMatchLongest)
 
 TEST(Group, SimpleGroup)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("(12)", TerminalSymbol::ASSIGN_OP);
-    const auto parseRes = lex.parse("12");
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("(12)", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("12");
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, "12");
@@ -81,9 +81,9 @@ TEST(Group, SimpleGroup)
 
 TEST(Group, SingleRuleNested2Times)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("((12))", TerminalSymbol::ASSIGN_OP);
-    const auto parseRes = lex.parse("12");
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("((12))", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("12");
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, "12");
@@ -91,13 +91,13 @@ TEST(Group, SingleRuleNested2Times)
 
 TEST(Group, SingleRuleNested32Times)
 {
-    ThompsonAnalyzer lex;
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
     std::string rule = "12";
     for (size_t i = 0; i < 32; ++i) {
         rule = '(' + rule + ')';
     }
-    lex.addRule(rule, TerminalSymbol::ASSIGN_OP);
-    const auto parseRes = lex.parse("12");
+    lexConstructor->addRule(rule, TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("12");
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, "12");
@@ -105,13 +105,13 @@ TEST(Group, SingleRuleNested32Times)
 
 TEST(Group, SingleRuleNested256Times)
 {
-    ThompsonAnalyzer lex;
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
     std::string rule = "12";
     for (size_t i = 0; i < 256; ++i) {
         rule = '(' + rule + ')';
     }
-    lex.addRule(rule, TerminalSymbol::ASSIGN_OP);
-    const auto parseRes = lex.parse("12");
+    lexConstructor->addRule(rule, TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("12");
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, "12");
@@ -119,9 +119,9 @@ TEST(Group, SingleRuleNested256Times)
 
 TEST(Group, GroupOf2Groups)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("((12)(34))", TerminalSymbol::ASSIGN_OP);
-    const auto parseRes = lex.parse("1234");
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("((12)(34))", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("1234");
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, "1234");
@@ -129,13 +129,13 @@ TEST(Group, GroupOf2Groups)
 
 TEST(Group, TwoGroupsNested32Times)
 {
-    ThompsonAnalyzer lex;
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
     std::string rule = "(12)(34)";
     for (size_t i = 0; i < 32; ++i) {
         rule = '(' + rule + ')';
     }
-    lex.addRule(rule, TerminalSymbol::ASSIGN_OP);
-    const auto parseRes = lex.parse("1234");
+    lexConstructor->addRule(rule, TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("1234");
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, "1234");
@@ -144,9 +144,9 @@ TEST(Group, TwoGroupsNested32Times)
 // ===== Union =====
 TEST(Union, SimpleUnion)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("[12]", TerminalSymbol::ASSIGN_OP);
-    const auto parseRes = lex.parse("1");
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("[12]", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("1");
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, "1");
@@ -154,33 +154,33 @@ TEST(Union, SimpleUnion)
 
 TEST(Union, SimpleUnionFail)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("[12]", TerminalSymbol::ASSIGN_OP);
-    const auto parseRes = lex.parse("3");
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("[12]", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("3");
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ERROR);
 }
 
 TEST(Union, NestedUnionsEachSymStandalone)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("[[01][2][345]]", TerminalSymbol::ASSIGN_OP);
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("[[01][2][345]]", TerminalSymbol::ASSIGN_OP);
     for (size_t i = 0; i <= 5; ++i) {
-        const auto parseRes = lex.parse(to_string(i));
+        const auto parseRes = LexicalAnalyzer(lexConstructor).parse(to_string(i));
         ASSERT_EQ(parseRes.size(), 1);
         EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
         EXPECT_EQ(parseRes[0]->text, std::to_string(i));
     }
 
-    const auto parseRes = lex.parse("6");
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("6");
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ERROR);
 }
 
 TEST(Union, NestedUnionsSymbolsTogether)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("[[01][2][345][6[7][89]]]", TerminalSymbol::ASSIGN_OP);
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("[[01][2][345][6[7][89]]]", TerminalSymbol::ASSIGN_OP);
 
     std::string toParse;
     const size_t cnt = 10;
@@ -188,7 +188,7 @@ TEST(Union, NestedUnionsSymbolsTogether)
         toParse += to_string(i);
     }
 
-    const auto parseRes = lex.parse(toParse);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
     ASSERT_EQ(parseRes.size(), cnt);
     for (size_t i = 0; i < cnt; ++i) {
         EXPECT_EQ(parseRes[i]->symbolType, TerminalSymbol::ASSIGN_OP);
@@ -199,9 +199,9 @@ TEST(Union, NestedUnionsSymbolsTogether)
 // ===== Asterisk =====
 TEST(Asterisk, SimpleAsterisk)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("1*", TerminalSymbol::ASSIGN_OP);
-    const auto parseRes = lex.parse("1111");
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("1*", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("1111");
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, "1111");
@@ -209,9 +209,9 @@ TEST(Asterisk, SimpleAsterisk)
 
 TEST(Asterisk, AsteriskMatchesEmptyAndGroup)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("1*2", TerminalSymbol::ASSIGN_OP);
-    const auto parseRes = lex.parse("2");
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("1*2", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("2");
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, "2");
@@ -219,12 +219,12 @@ TEST(Asterisk, AsteriskMatchesEmptyAndGroup)
 
 TEST(Asterisk, AsteriskMatchesManyCnt)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("1*", TerminalSymbol::ASSIGN_OP);
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("1*", TerminalSymbol::ASSIGN_OP);
     std::string toParse;
     for (size_t i = 1; i <= 100; ++i) {
         toParse += "1";
-        const auto parseRes = lex.parse(toParse);
+        const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
         ASSERT_EQ(parseRes.size(), 1);
         EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
         EXPECT_EQ(parseRes[0]->text, toParse);
@@ -233,9 +233,9 @@ TEST(Asterisk, AsteriskMatchesManyCnt)
 
 TEST(Asterisk, AsteriskMatchesManyAndGroup)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("1*2", TerminalSymbol::ASSIGN_OP);
-    const auto parseRes = lex.parse("11112");
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("1*2", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("11112");
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, "11112");
@@ -243,9 +243,9 @@ TEST(Asterisk, AsteriskMatchesManyAndGroup)
 
 TEST(Asterisk, AsteriskMatchFail)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("2*", TerminalSymbol::ASSIGN_OP);
-    const auto parseRes = lex.parse("111111111111111");
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("2*", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("111111111111111");
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ERROR);
     EXPECT_EQ(parseRes[0]->text, "");
@@ -253,9 +253,9 @@ TEST(Asterisk, AsteriskMatchFail)
 
 TEST(Asterisk, AsteriskMatchAndGroupFail)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("2*3", TerminalSymbol::ASSIGN_OP);
-    const auto parseRes = lex.parse("111111111111111");
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("2*3", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("111111111111111");
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ERROR);
     EXPECT_EQ(parseRes[0]->text, "");
@@ -263,9 +263,9 @@ TEST(Asterisk, AsteriskMatchAndGroupFail)
 
 TEST(Asterisk, SimpleGroupAsterisk)
 {
-    ThompsonAnalyzer lex;
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
     const std::string rule = "123456789";
-    lex.addRule("(" + rule + ")*", TerminalSymbol::ASSIGN_OP);
+    lexConstructor->addRule("(" + rule + ")*", TerminalSymbol::ASSIGN_OP);
 
     std::string ruleDuplicated;
     const size_t duplicatesCnt = 10;
@@ -274,7 +274,7 @@ TEST(Asterisk, SimpleGroupAsterisk)
         ruleDuplicated += rule;
     }
 
-    const auto parseRes = lex.parse(ruleDuplicated);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(ruleDuplicated);
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, ruleDuplicated);
@@ -282,9 +282,9 @@ TEST(Asterisk, SimpleGroupAsterisk)
 
 TEST(Asterisk, GroupAsteriskMatchesAndFail)
 {
-    ThompsonAnalyzer lex;
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
     const std::string rule = "123456789";
-    lex.addRule("(" + rule + ")*", TerminalSymbol::ASSIGN_OP);
+    lexConstructor->addRule("(" + rule + ")*", TerminalSymbol::ASSIGN_OP);
 
     std::string ruleDuplicated;
     const size_t duplicatesCnt = 10;
@@ -293,7 +293,7 @@ TEST(Asterisk, GroupAsteriskMatchesAndFail)
     }
     ruleDuplicated.pop_back();
 
-    const auto parseRes = lex.parse(ruleDuplicated);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(ruleDuplicated);
     ASSERT_GT(parseRes.size(), 0);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, ruleDuplicated.substr(0, rule.size() * (duplicatesCnt - 1)));
@@ -303,10 +303,10 @@ TEST(Asterisk, GroupAsteriskMatchesAndFail)
 
 TEST(Asterisk, TwoAsterisks)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("2*3*", TerminalSymbol::ASSIGN_OP);
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("2*3*", TerminalSymbol::ASSIGN_OP);
     const std::string toParse = "22222333333333333";
-    const auto parseRes = lex.parse(toParse);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, toParse);
@@ -314,12 +314,12 @@ TEST(Asterisk, TwoAsterisks)
 
 TEST(Asterisk, AsteriskAndGroupMatchesLongest)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("2*", TerminalSymbol::BLANK);
-    lex.addRule("2*", TerminalSymbol::CLOSED_BRACKET);
-    lex.addRule("2*1", TerminalSymbol::ASSIGN_OP);
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("2*", TerminalSymbol::BLANK);
+    lexConstructor->addRule("2*", TerminalSymbol::CLOSED_BRACKET);
+    lexConstructor->addRule("2*1", TerminalSymbol::ASSIGN_OP);
     const std::string toParse = "22222221";
-    const auto parseRes = lex.parse(toParse);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, toParse);
@@ -327,11 +327,11 @@ TEST(Asterisk, AsteriskAndGroupMatchesLongest)
 
 TEST(Asterisk, TwoAsteriskRulesFirstFails)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule("3*", TerminalSymbol::BLANK);
-    lex.addRule("2*", TerminalSymbol::ASSIGN_OP);
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("3*", TerminalSymbol::BLANK);
+    lexConstructor->addRule("2*", TerminalSymbol::ASSIGN_OP);
     const std::string toParse = "2222222";
-    const auto parseRes = lex.parse(toParse);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, toParse);
@@ -340,9 +340,9 @@ TEST(Asterisk, TwoAsteriskRulesFirstFails)
 // ====== Dot ======
 TEST(Dot, DotMatchesAnyChar)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule(".", TerminalSymbol::ASSIGN_OP);
-    const auto parseRes = lex.parse("2");
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule(".", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("2");
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, "2");
@@ -350,14 +350,14 @@ TEST(Dot, DotMatchesAnyChar)
 
 TEST(Dot, DotMatchesOnlySingleChar)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule(".", TerminalSymbol::ASSIGN_OP);
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule(".", TerminalSymbol::ASSIGN_OP);
     const size_t toParseLength = 64;
     std::string toParse;
     for (size_t i = 0; i < toParseLength; ++i) {
         toParse += to_string(i % 10);
     }
-    const auto parseRes = lex.parse(toParse);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
     ASSERT_EQ(parseRes.size(), toParseLength);
     for (size_t i = 0; i < toParseLength; ++i) {
         EXPECT_EQ(parseRes[i]->symbolType, TerminalSymbol::ASSIGN_OP);
@@ -368,14 +368,14 @@ TEST(Dot, DotMatchesOnlySingleChar)
 // ====== Dot and Asterisk ======
 TEST(DotAndAsterisk, DotMatchesAnything)
 {
-    ThompsonAnalyzer lex;
-    lex.addRule(".*", TerminalSymbol::ASSIGN_OP);
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule(".*", TerminalSymbol::ASSIGN_OP);
     const size_t toParseLength = 64;
     std::string toParse;
     for (size_t i = 0; i < toParseLength; ++i) {
         toParse += to_string(i % 10);
     }
-    const auto parseRes = lex.parse(toParse);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, toParse);
@@ -384,9 +384,9 @@ TEST(DotAndAsterisk, DotMatchesAnything)
 // ====== Asterisk and Union ======
 TEST(AsteriskAndUnion, AsteriskMatchesEachCharFromUnion)
 {
-    ThompsonAnalyzer lex;
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
     const std::string rule = "123456789";
-    lex.addRule("[" + rule + "]*", TerminalSymbol::ASSIGN_OP);
+    lexConstructor->addRule("[" + rule + "]*", TerminalSymbol::ASSIGN_OP);
 
     std::string toParse;
     toParse.reserve(rule.size());
@@ -394,7 +394,7 @@ TEST(AsteriskAndUnion, AsteriskMatchesEachCharFromUnion)
         toParse.push_back(rule[i]);
     }
 
-    const auto parseRes = lex.parse(toParse);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, toParse);
@@ -406,10 +406,11 @@ class RealTokens : public ::testing::Test
 protected:
     void SetUp() override
     {
-        lex.addRule("[0123456789]+", TerminalSymbol::NUM_LIT);
-        lex.addRule(";", TerminalSymbol::SEMICOLON);
+        lexConstructor = std::make_shared<ThompsonConstructor>();
+        lexConstructor->addRule("[0123456789]+", TerminalSymbol::NUM_LIT);
+        lexConstructor->addRule(";", TerminalSymbol::SEMICOLON);
     }
-    ThompsonAnalyzer lex;
+    std::shared_ptr<LexicalAnalyzerConstructor> lexConstructor;
 };
 
 TEST_F(RealTokens, IntegersWithSemicolons)
@@ -420,7 +421,7 @@ TEST_F(RealTokens, IntegersWithSemicolons)
     for (auto integer : integers) {
         toParse += integer + ";";
     }
-    const auto parseRes = lex.parse(toParse);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
     ASSERT_EQ(parseRes.size() % 2, 0);
     for (size_t i = 0; i < parseRes.size(); i += 2) {
         EXPECT_EQ(parseRes[i]->symbolType, TerminalSymbol::NUM_LIT);

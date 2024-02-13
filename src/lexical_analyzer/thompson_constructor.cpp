@@ -1,4 +1,4 @@
-#include "thompson_analyzer.hpp"
+#include "thompson_constructor.hpp"
 
 #include <exception>
 #include <stack>
@@ -11,8 +11,8 @@ struct LexicalVertice
     bool isAccepting = false;
 };
 
-ThompsonAnalyzer::ThompsonAnalyzer() {}
-ThompsonAnalyzer::~ThompsonAnalyzer() {}
+ThompsonConstructor::ThompsonConstructor() {}
+ThompsonConstructor::~ThompsonConstructor() {}
 
 enum class SubregexType
 {
@@ -214,7 +214,7 @@ static Subregex processSubregex(std::string_view &ruleTail)
     }
 }
 
-void ThompsonAnalyzer::addRule(std::string rule, TerminalSymbol tokenToReturn)
+void ThompsonConstructor::addRule(std::string rule, TerminalSymbol tokenToReturn)
 {
     rule = '(' + rule + ')';
     std::string_view ruleView = rule;
@@ -222,46 +222,5 @@ void ThompsonAnalyzer::addRule(std::string rule, TerminalSymbol tokenToReturn)
     assert(regex.subregexType != SubregexType::ERROR);
     regex.end->isAccepting = true;
     firstVertices.push_back({regex.begin, tokenToReturn});
-}
-
-static std::pair<size_t, bool> matchMaxRule(std::string_view str, LexicalVertice *vertice)
-{
-    bool isMatched = vertice->isAccepting;
-    size_t mx = 0;
-    for (auto &trans : vertice->transitions) {
-        if (trans.second == EPS ||
-            (str.size() > 0 && (trans.second == '.' || trans.second == str[0]))) {
-            const auto res = matchMaxRule(str.substr(trans.second != EPS), trans.first);
-            if (res.second) {
-                mx = std::max(mx, (trans.second != EPS) + res.first);
-                isMatched = true;
-            }
-        }
-    }
-
-    return {isMatched ? mx : 0, isMatched};
-}
-
-TerminalSymbolsAst ThompsonAnalyzer::parse(std::string toParse)
-{
-    TerminalSymbolsAst tokens;
-    std::string_view view = toParse;
-    size_t maxRuleMatched = 0;
-    do {
-        maxRuleMatched = 0;
-        TerminalSymbol currentToken = TerminalSymbol::ERROR;
-        for (size_t ruleIndex = 0; ruleIndex < firstVertices.size(); ++ruleIndex) {
-            const size_t curr = matchMaxRule(view, firstVertices[ruleIndex].first).first;
-            if (curr > maxRuleMatched) {
-                currentToken = firstVertices[ruleIndex].second;
-                maxRuleMatched = curr;
-            }
-        }
-        tokens.push_back(std::make_shared<TerminalSymbolAst>(
-            currentToken, std::string(view.substr(0, maxRuleMatched))));
-        view = view.substr(maxRuleMatched);
-    } while (view.size() > 0 && maxRuleMatched > 0);
-
-    return tokens;
 }
 

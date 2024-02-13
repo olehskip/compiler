@@ -1,4 +1,3 @@
-#include "lexical_analyzer.hpp"
 #include "symbols.hpp"
 #include "syntax_analyzer.hpp"
 #include <iostream>

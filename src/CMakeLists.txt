@@ -11,7 +11,7 @@ set(MAGIC_ENUM_INCLUDES "${PROJECT_SOURCE_DIR}/submodules/magic_enum/include")
 
 set(SOURCES 
 	src/lexical_analyzer/lexical_analyzer.cpp
-	src/lexical_analyzer/thompson_analyzer.cpp
+	src/lexical_analyzer/thompson_constructor.cpp
     src/syntax_analyzer.cpp
 )
 

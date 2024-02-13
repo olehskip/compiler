@@ -10,13 +10,15 @@ set(COMPILER_OUTPUT compiler_output)
 set(MAGIC_ENUM_INCLUDES "${PROJECT_SOURCE_DIR}/submodules/magic_enum/include")
 
 set(SOURCES 
-	src/lexical_analyzer.cpp
-	src/syntax_analyzer.cpp
+	src/lexical_analyzer/lexical_analyzer.cpp
+	src/lexical_analyzer/thompson_analyzer.cpp
+    src/syntax_analyzer.cpp
 )
 
 add_library(${COMPILER_LIB_OUTPUT} STATIC ${SOURCES})
 # target_compile_options(${COMPILER_LIB_OUTPUT} PRIVATE "-Wall" "-Wextra" "-Wextra" "-O0" "-g")
 target_include_directories(${COMPILER_LIB_OUTPUT} PUBLIC ${MAGIC_ENUM_INCLUDES})
+target_include_directories(${COMPILER_LIB_OUTPUT} PUBLIC src)
 
 add_executable(${COMPILER_OUTPUT} src/main.cpp)
 target_link_libraries(${COMPILER_OUTPUT} ${COMPILER_LIB_OUTPUT})

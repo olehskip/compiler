@@ -1,4 +1,4 @@
-#include "lexical_analyzer.hpp"
+#include "lexical_analyzer/thompson_analyzer.hpp"
 #include <gtest/gtest.h>
 #include <string>
 
@@ -8,7 +8,7 @@ using namespace std;
 
 TEST(Group, RuleAndParseSingleSameLetter)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("1", TerminalSymbol::ASSIGN_OP);
     const auto parseRes = lex.parse("1");
     ASSERT_EQ(parseRes.size(), 1);
@@ -18,7 +18,7 @@ TEST(Group, RuleAndParseSingleSameLetter)
 
 TEST(Group, RuleAndParseStrDifferent)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("1111111", TerminalSymbol::ASSIGN_OP);
     const auto parseRes = lex.parse("22");
     ASSERT_EQ(parseRes.size(), 1);
@@ -28,7 +28,7 @@ TEST(Group, RuleAndParseStrDifferent)
 
 TEST(Group, RuleMatchesSeveralTimes)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     const std::string rule = "12";
     lex.addRule(rule, TerminalSymbol::ASSIGN_OP);
 
@@ -49,7 +49,7 @@ TEST(Group, RuleMatchesSeveralTimes)
 
 TEST(Group, TwoRulesFirstFails)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("222", TerminalSymbol::BLANK);
     lex.addRule("11", TerminalSymbol::ASSIGN_OP);
     const auto parseRes = lex.parse("11");
@@ -60,7 +60,7 @@ TEST(Group, TwoRulesFirstFails)
 
 TEST(Group, TwoRulesMatchLongest)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("11", TerminalSymbol::BLANK);
     lex.addRule("1111", TerminalSymbol::ASSIGN_OP);
     const auto parseRes = lex.parse("1111");
@@ -71,7 +71,7 @@ TEST(Group, TwoRulesMatchLongest)
 
 TEST(Group, SimpleGroup)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("(12)", TerminalSymbol::ASSIGN_OP);
     const auto parseRes = lex.parse("12");
     ASSERT_EQ(parseRes.size(), 1);
@@ -81,7 +81,7 @@ TEST(Group, SimpleGroup)
 
 TEST(Group, SingleRuleNested2Times)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("((12))", TerminalSymbol::ASSIGN_OP);
     const auto parseRes = lex.parse("12");
     ASSERT_EQ(parseRes.size(), 1);
@@ -91,7 +91,7 @@ TEST(Group, SingleRuleNested2Times)
 
 TEST(Group, SingleRuleNested32Times)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     std::string rule = "12";
     for (size_t i = 0; i < 32; ++i) {
         rule = '(' + rule + ')';
@@ -105,7 +105,7 @@ TEST(Group, SingleRuleNested32Times)
 
 TEST(Group, SingleRuleNested256Times)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     std::string rule = "12";
     for (size_t i = 0; i < 256; ++i) {
         rule = '(' + rule + ')';
@@ -119,7 +119,7 @@ TEST(Group, SingleRuleNested256Times)
 
 TEST(Group, GroupOf2Groups)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("((12)(34))", TerminalSymbol::ASSIGN_OP);
     const auto parseRes = lex.parse("1234");
     ASSERT_EQ(parseRes.size(), 1);
@@ -129,7 +129,7 @@ TEST(Group, GroupOf2Groups)
 
 TEST(Group, TwoGroupsNested32Times)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     std::string rule = "(12)(34)";
     for (size_t i = 0; i < 32; ++i) {
         rule = '(' + rule + ')';
@@ -144,7 +144,7 @@ TEST(Group, TwoGroupsNested32Times)
 // ===== Union =====
 TEST(Union, SimpleUnion)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("[12]", TerminalSymbol::ASSIGN_OP);
     const auto parseRes = lex.parse("1");
     ASSERT_EQ(parseRes.size(), 1);
@@ -154,7 +154,7 @@ TEST(Union, SimpleUnion)
 
 TEST(Union, SimpleUnionFail)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("[12]", TerminalSymbol::ASSIGN_OP);
     const auto parseRes = lex.parse("3");
     ASSERT_EQ(parseRes.size(), 1);
@@ -163,7 +163,7 @@ TEST(Union, SimpleUnionFail)
 
 TEST(Union, NestedUnionsEachSymStandalone)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("[[01][2][345]]", TerminalSymbol::ASSIGN_OP);
     for (size_t i = 0; i <= 5; ++i) {
         const auto parseRes = lex.parse(to_string(i));
@@ -179,7 +179,7 @@ TEST(Union, NestedUnionsEachSymStandalone)
 
 TEST(Union, NestedUnionsSymbolsTogether)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("[[01][2][345][6[7][89]]]", TerminalSymbol::ASSIGN_OP);
 
     std::string toParse;
@@ -199,7 +199,7 @@ TEST(Union, NestedUnionsSymbolsTogether)
 // ===== Asterisk =====
 TEST(Asterisk, SimpleAsterisk)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("1*", TerminalSymbol::ASSIGN_OP);
     const auto parseRes = lex.parse("1111");
     ASSERT_EQ(parseRes.size(), 1);
@@ -209,7 +209,7 @@ TEST(Asterisk, SimpleAsterisk)
 
 TEST(Asterisk, AsteriskMatchesEmptyAndGroup)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("1*2", TerminalSymbol::ASSIGN_OP);
     const auto parseRes = lex.parse("2");
     ASSERT_EQ(parseRes.size(), 1);
@@ -219,7 +219,7 @@ TEST(Asterisk, AsteriskMatchesEmptyAndGroup)
 
 TEST(Asterisk, AsteriskMatchesManyCnt)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("1*", TerminalSymbol::ASSIGN_OP);
     std::string toParse;
     for (size_t i = 1; i <= 100; ++i) {
@@ -233,7 +233,7 @@ TEST(Asterisk, AsteriskMatchesManyCnt)
 
 TEST(Asterisk, AsteriskMatchesManyAndGroup)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("1*2", TerminalSymbol::ASSIGN_OP);
     const auto parseRes = lex.parse("11112");
     ASSERT_EQ(parseRes.size(), 1);
@@ -243,7 +243,7 @@ TEST(Asterisk, AsteriskMatchesManyAndGroup)
 
 TEST(Asterisk, AsteriskMatchFail)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("2*", TerminalSymbol::ASSIGN_OP);
     const auto parseRes = lex.parse("111111111111111");
     ASSERT_EQ(parseRes.size(), 1);
@@ -253,7 +253,7 @@ TEST(Asterisk, AsteriskMatchFail)
 
 TEST(Asterisk, AsteriskMatchAndGroupFail)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("2*3", TerminalSymbol::ASSIGN_OP);
     const auto parseRes = lex.parse("111111111111111");
     ASSERT_EQ(parseRes.size(), 1);
@@ -263,7 +263,7 @@ TEST(Asterisk, AsteriskMatchAndGroupFail)
 
 TEST(Asterisk, SimpleGroupAsterisk)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     const std::string rule = "123456789";
     lex.addRule("(" + rule + ")*", TerminalSymbol::ASSIGN_OP);
 
@@ -282,7 +282,7 @@ TEST(Asterisk, SimpleGroupAsterisk)
 
 TEST(Asterisk, GroupAsteriskMatchesAndFail)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     const std::string rule = "123456789";
     lex.addRule("(" + rule + ")*", TerminalSymbol::ASSIGN_OP);
 
@@ -303,7 +303,7 @@ TEST(Asterisk, GroupAsteriskMatchesAndFail)
 
 TEST(Asterisk, TwoAsterisks)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("2*3*", TerminalSymbol::ASSIGN_OP);
     const std::string toParse = "22222333333333333";
     const auto parseRes = lex.parse(toParse);
@@ -314,7 +314,7 @@ TEST(Asterisk, TwoAsterisks)
 
 TEST(Asterisk, AsteriskAndGroupMatchesLongest)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("2*", TerminalSymbol::BLANK);
     lex.addRule("2*", TerminalSymbol::CLOSED_BRACKET);
     lex.addRule("2*1", TerminalSymbol::ASSIGN_OP);
@@ -327,7 +327,7 @@ TEST(Asterisk, AsteriskAndGroupMatchesLongest)
 
 TEST(Asterisk, TwoAsteriskRulesFirstFails)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule("3*", TerminalSymbol::BLANK);
     lex.addRule("2*", TerminalSymbol::ASSIGN_OP);
     const std::string toParse = "2222222";
@@ -340,7 +340,7 @@ TEST(Asterisk, TwoAsteriskRulesFirstFails)
 // ====== Dot ======
 TEST(Dot, DotMatchesAnyChar)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule(".", TerminalSymbol::ASSIGN_OP);
     const auto parseRes = lex.parse("2");
     ASSERT_EQ(parseRes.size(), 1);
@@ -350,7 +350,7 @@ TEST(Dot, DotMatchesAnyChar)
 
 TEST(Dot, DotMatchesOnlySingleChar)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule(".", TerminalSymbol::ASSIGN_OP);
     const size_t toParseLength = 64;
     std::string toParse;
@@ -368,7 +368,7 @@ TEST(Dot, DotMatchesOnlySingleChar)
 // ====== Dot and Asterisk ======
 TEST(DotAndAsterisk, DotMatchesAnything)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     lex.addRule(".*", TerminalSymbol::ASSIGN_OP);
     const size_t toParseLength = 64;
     std::string toParse;
@@ -384,7 +384,7 @@ TEST(DotAndAsterisk, DotMatchesAnything)
 // ====== Asterisk and Union ======
 TEST(AsteriskAndUnion, AsteriskMatchesEachCharFromUnion)
 {
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
     const std::string rule = "123456789";
     lex.addRule("[" + rule + "]*", TerminalSymbol::ASSIGN_OP);
 
@@ -409,7 +409,7 @@ protected:
         lex.addRule("[0123456789]+", TerminalSymbol::NUM_LIT);
         lex.addRule(";", TerminalSymbol::SEMICOLON);
     }
-    LexicalAnalyzer lex;
+    ThompsonAnalyzer lex;
 };
 
 TEST_F(RealTokens, IntegersWithSemicolons)

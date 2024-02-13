@@ -1,12 +1,18 @@
-#include "lexical_analyzer.hpp"
+#include "thompson_analyzer.hpp"
 
 #include <exception>
-#include <iostream>
 #include <stack>
 
 #define EPS '\0'
 
-LexicalAnalyzer::LexicalAnalyzer() {}
+struct LexicalVertice
+{
+    std::vector<Transition> transitions;
+    bool isAccepting = false;
+};
+
+ThompsonAnalyzer::ThompsonAnalyzer() {}
+ThompsonAnalyzer::~ThompsonAnalyzer() {}
 
 enum class SubregexType
 {
@@ -29,18 +35,18 @@ struct Subregex
     SubregexType subregexType;
 };
 
-bool isRegularChar(char ch)
+static inline bool isRegularChar(char ch)
 {
     return std::isdigit(ch) || std::isalpha(ch) || ch == '.' || ch == ';';
 }
 
-static void addTransition(LexicalVertice *from, LexicalVertice *to, char transChar)
+static inline void addTransition(LexicalVertice *from, LexicalVertice *to, char transChar)
 {
     from->transitions.push_back(Transition{to, transChar});
 }
 
 // returns subregex type based on first char of the subregex
-static SubregexType getSubregexType(char ch)
+static inline SubregexType getSubregexType(char ch)
 {
     if (isRegularChar(ch)) {
         return SubregexType::SIMPLE;
@@ -56,7 +62,7 @@ static SubregexType getSubregexType(char ch)
     }
 }
 
-static QuantifierType getQuantifierType(char ch)
+static inline QuantifierType getQuantifierType(char ch)
 {
     switch (ch) {
         case '*':
@@ -208,7 +214,7 @@ static Subregex processSubregex(std::string_view &ruleTail)
     }
 }
 
-void LexicalAnalyzer::addRule(std::string rule, TerminalSymbol tokenToReturn)
+void ThompsonAnalyzer::addRule(std::string rule, TerminalSymbol tokenToReturn)
 {
     rule = '(' + rule + ')';
     std::string_view ruleView = rule;
@@ -236,7 +242,7 @@ static std::pair<size_t, bool> matchMaxRule(std::string_view str, LexicalVertice
     return {isMatched ? mx : 0, isMatched};
 }
 
-TerminalSymbolsAst LexicalAnalyzer::parse(std::string toParse)
+TerminalSymbolsAst ThompsonAnalyzer::parse(std::string toParse)
 {
     TerminalSymbolsAst tokens;
     std::string_view view = toParse;
@@ -258,3 +264,4 @@ TerminalSymbolsAst LexicalAnalyzer::parse(std::string toParse)
 
     return tokens;
 }
+

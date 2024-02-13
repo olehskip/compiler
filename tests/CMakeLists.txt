@@ -10,3 +10,4 @@ target_link_libraries(lexical_analyzer_test GTest::gtest_main ${COMPILER_LIB_OUT
 target_include_directories(lexical_analyzer_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 gtest_discover_tests(lexical_analyzer_test)
+

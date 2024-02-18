@@ -18,75 +18,98 @@ enum class SubregexType
 {
     GROUP, // (...)
     UNION, // [...]
-    SIMPLE,
-    ERROR
+    SIMPLE
 };
 
-enum class QuantifierType
+struct RuleSymbol
 {
-    ASTERISK,
-    PLUS,
-    ERROR
+    std::variant<char, MetaRuleSymbol, std::monostate> symbol;
+    size_t width;
 };
 
 struct Subregex
 {
     LexicalVertice *begin = nullptr, *end = nullptr;
-    SubregexType subregexType;
+    SubregexType subregexType; // is stored to know whether the finishing symbol matches the type
 };
 
-static inline bool isRegularChar(char ch)
-{
-    return std::isdigit(ch) || std::isalpha(ch) || ch == '.' || ch == ';';
-}
+using MaybeSubregex = std::optional<Subregex>;
 
 static inline void addTransition(LexicalVertice *from, LexicalVertice *to, char transChar)
 {
     from->transitions.push_back(Transition{to, transChar});
 }
 
-// returns subregex type based on first char of the subregex
-static inline SubregexType getSubregexType(char ch)
+static RuleSymbol getNextRuleSymbol(std::string_view &rule_view)
 {
-    if (isRegularChar(ch)) {
-        return SubregexType::SIMPLE;
+    RuleSymbol ret = {std::monostate(), 0};
+    if (rule_view.size() == 0) {
+        ret = {std::monostate(), 0};
+    } else if (rule_view[0] == '\\') {
+        if (rule_view.size() > 1) {
+            ret = {rule_view[1], 2};
+        }
+    } else if (std::isalnum(rule_view[0]) || rule_view[0] == ';') { // TODO: redo it
+        ret = {rule_view[0], 1};
+    } else {
+        switch (rule_view[0]) {
+            case '(': {
+                ret = {MetaRuleSymbol::PARENTHESIS_OPEN, 1};
+                break;
+            }
+            case ')': {
+                ret = {MetaRuleSymbol::PARENTHESIS_CLOSE, 1};
+                break;
+            }
+            case '[': {
+                ret = {MetaRuleSymbol::BRACKET_OPEN, 1};
+                break;
+            }
+            case ']': {
+                ret = {MetaRuleSymbol::BRACKET_CLOSE, 1};
+                break;
+            }
+            case '.': {
+                ret = {MetaRuleSymbol::DOT, 1};
+                break;
+            }
+            case '*': {
+                ret = {MetaRuleSymbol::ASTERIX, 1};
+                break;
+            }
+            case '+': {
+                ret = {MetaRuleSymbol::PLUS, 1};
+                break;
+            }
+        }
     }
-    switch (ch) {
-        case '(':
-            return SubregexType::GROUP;
-        case '[':
-            return SubregexType::UNION;
-
-        default:
-            return SubregexType::ERROR;
-    }
+    return ret;
 }
 
-static inline QuantifierType getQuantifierType(char ch)
+static bool isRuleSymbolValid(RuleSymbol ruleSymbol)
 {
-    switch (ch) {
-        case '*':
-            return QuantifierType::ASTERISK;
-        case '+':
-            return QuantifierType::PLUS;
-        default:
-            return QuantifierType::ERROR;
-    }
+    return !std::holds_alternative<std::monostate>(ruleSymbol.symbol);
 }
 
-constexpr static char getSubregexTypeEndChar(SubregexType subregexType)
+static inline bool doesSubregexLastSymbolMatch(RuleSymbol lastSymbol, SubregexType subregexType)
 {
-    switch (subregexType) {
-        case SubregexType::GROUP:
-            return ')';
-        case SubregexType::UNION:
-            return ']';
-        default:
-            throw std::invalid_argument("subgregexType is invalid");
+    if (const MetaRuleSymbol *metaRuleSymbol = std::get_if<MetaRuleSymbol>(&lastSymbol.symbol)) {
+        switch (*metaRuleSymbol) {
+            case MetaRuleSymbol::PARENTHESIS_CLOSE: {
+                return subregexType == SubregexType::GROUP;
+            }
+            case MetaRuleSymbol::BRACKET_CLOSE: {
+                return subregexType == SubregexType::UNION;
+            }
+            default: {
+                break;
+            }
+        }
     }
+    return false;
 }
 
-static Subregex processSubregex(std::string_view &ruleTail);
+static std::optional<Subregex> processSubregex(std::string_view &ruleTail);
 
 static void processAsteriskQuantifier(std::string_view &ruleTail, Subregex &subregex)
 {
@@ -113,23 +136,25 @@ static void processPlusQuantifier(std::string_view &ruleTail, Subregex &subregex
 
 static void processPossibleQuantifier(std::string_view &ruleTail, Subregex &subregex)
 {
-    if (ruleTail.empty()) {
-        return;
-    }
-    const auto quantifierType = getQuantifierType(ruleTail.at(0));
-    switch (quantifierType) {
-        case QuantifierType::ASTERISK:
-            processAsteriskQuantifier(ruleTail, subregex);
-            break;
-        case QuantifierType::PLUS:
-            processPlusQuantifier(ruleTail, subregex);
-            break;
-        default:
-            break;
+    const auto currRuleSymbol = getNextRuleSymbol(ruleTail);
+    if (const MetaRuleSymbol *metaRuleSymbol =
+            std::get_if<MetaRuleSymbol>(&currRuleSymbol.symbol)) {
+        switch (*metaRuleSymbol) {
+            case MetaRuleSymbol::ASTERIX: {
+                processAsteriskQuantifier(ruleTail, subregex);
+                break;
+            }
+            case MetaRuleSymbol::PLUS: {
+                processPlusQuantifier(ruleTail, subregex);
+                break;
+            }
+            default:
+                break;
+        }
     }
 }
 
-static Subregex processSimpleSubregex(std::string_view &ruleTail)
+static MaybeSubregex processSimpleSubregex(std::string_view &ruleTail)
 {
     const char currChar = ruleTail[0];
     ruleTail = ruleTail.substr(1);
@@ -140,25 +165,26 @@ static Subregex processSimpleSubregex(std::string_view &ruleTail)
     return currSubregex;
 }
 
-static Subregex processGroupSubregex(std::string_view &ruleTail)
+static MaybeSubregex processGroupSubregex(std::string_view &ruleTail)
 {
     ruleTail = ruleTail.substr(1);
     auto currSubregexBegin = new LexicalVertice(), currSubregexEnd = new LexicalVertice();
     auto lastChildSubregexEnd = currSubregexBegin;
     for (;;) {
-        if (ruleTail.empty()) {
-            return {nullptr, nullptr, SubregexType::ERROR};
-        } else if (ruleTail.at(0) == getSubregexTypeEndChar(SubregexType::GROUP)) {
+        const auto currRuleSymbol = getNextRuleSymbol(ruleTail);
+        if (!isRuleSymbolValid(currRuleSymbol)) {
+            return std::nullopt;
+        } else if (doesSubregexLastSymbolMatch(currRuleSymbol, SubregexType::GROUP)) {
             ruleTail = ruleTail.substr(1);
             break;
         }
 
         auto childSubregex = processSubregex(ruleTail);
-        if (childSubregex.subregexType == SubregexType::ERROR) {
-            return {nullptr, nullptr, SubregexType::ERROR};
+        if (childSubregex) {
+            addTransition(lastChildSubregexEnd, childSubregex->begin, EPS);
+            lastChildSubregexEnd = childSubregex->end;
         } else {
-            addTransition(lastChildSubregexEnd, childSubregex.begin, EPS);
-            lastChildSubregexEnd = childSubregex.end;
+            return std::nullopt;
         }
     }
 
@@ -168,24 +194,25 @@ static Subregex processGroupSubregex(std::string_view &ruleTail)
     return currSubregex;
 }
 
-static Subregex processUnionSubregex(std::string_view &ruleTail)
+static MaybeSubregex processUnionSubregex(std::string_view &ruleTail)
 {
     ruleTail = ruleTail.substr(1);
     auto currSubregexBegin = new LexicalVertice(), currSubregexEnd = new LexicalVertice();
     for (;;) {
-        if (ruleTail.empty()) {
-            return {nullptr, nullptr, SubregexType::ERROR};
-        } else if (ruleTail.at(0) == getSubregexTypeEndChar(SubregexType::UNION)) {
+        const auto currRuleSymbol = getNextRuleSymbol(ruleTail);
+        if (!isRuleSymbolValid(currRuleSymbol)) {
+            return std::nullopt;
+        } else if (doesSubregexLastSymbolMatch(currRuleSymbol, SubregexType::UNION)) {
             ruleTail = ruleTail.substr(1);
             break;
         }
 
         auto childSubregex = processSubregex(ruleTail);
-        if (childSubregex.subregexType == SubregexType::ERROR) {
-            return {nullptr, nullptr, SubregexType::ERROR};
+        if (childSubregex) {
+            addTransition(currSubregexBegin, childSubregex->begin, EPS);
+            addTransition(childSubregex->end, currSubregexEnd, EPS);
         } else {
-            addTransition(currSubregexBegin, childSubregex.begin, EPS);
-            addTransition(childSubregex.end, currSubregexEnd, EPS);
+            return std::nullopt;
         }
     }
 
@@ -194,33 +221,34 @@ static Subregex processUnionSubregex(std::string_view &ruleTail)
     return currSubregex;
 }
 
-static Subregex processSubregex(std::string_view &ruleTail)
+static MaybeSubregex processSubregex(std::string_view &ruleTail)
 {
-    if (ruleTail.empty()) {
-        return Subregex{nullptr, nullptr, SubregexType::ERROR};
+    const auto currRuleSymbol = getNextRuleSymbol(ruleTail);
+    if (std::holds_alternative<char>(currRuleSymbol.symbol)) {
+        return processSimpleSubregex(ruleTail);
+    } else if (const MetaRuleSymbol *metaRuleSymbol =
+                   std::get_if<MetaRuleSymbol>(&currRuleSymbol.symbol)) {
+        switch (*metaRuleSymbol) {
+            case MetaRuleSymbol::PARENTHESIS_OPEN: {
+                return processGroupSubregex(ruleTail);
+            }
+            case MetaRuleSymbol::BRACKET_OPEN: {
+                return processUnionSubregex(ruleTail);
+            }
+            default: {
+                break;
+            }
+        }
     }
-    const char currChar = ruleTail[0];
-    const auto subregexType = getSubregexType(currChar);
-    switch (subregexType) {
-        case SubregexType::SIMPLE:
-            return processSimpleSubregex(ruleTail);
-        case SubregexType::GROUP:
-            return processGroupSubregex(ruleTail);
-        case SubregexType::UNION:
-            return processUnionSubregex(ruleTail);
-        case SubregexType::ERROR:
-        default:
-            return Subregex{nullptr, nullptr, SubregexType::ERROR};
-    }
+    return std::nullopt;
 }
 
 void ThompsonConstructor::addRule(std::string rule, TerminalSymbol tokenToReturn)
 {
     rule = '(' + rule + ')';
     std::string_view ruleView = rule;
-    Subregex regex = processSubregex(ruleView);
-    assert(regex.subregexType != SubregexType::ERROR);
-    regex.end->isAccepting = true;
-    firstVertices.push_back({regex.begin, tokenToReturn});
+    MaybeSubregex maybeRegex = processSubregex(ruleView);
+    assert(maybeRegex);
+    maybeRegex->end->isAccepting = true;
+    firstVertices.push_back({maybeRegex->begin, tokenToReturn});
 }
-

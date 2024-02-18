@@ -7,6 +7,17 @@ class LexicalAnalyzer;
 struct LexicalVertice;
 using Transition = std::pair<LexicalVertice *, char>;
 
+enum class MetaRuleSymbol
+{
+    PARENTHESIS_OPEN,
+    PARENTHESIS_CLOSE,
+    BRACKET_OPEN,
+    BRACKET_CLOSE,
+    DOT,
+    ASTERIX,
+    PLUS
+};
+
 class LexicalAnalyzerConstructor
 {
 public:

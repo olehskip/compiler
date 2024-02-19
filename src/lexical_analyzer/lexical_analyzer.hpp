@@ -5,7 +5,19 @@
 
 class LexicalAnalyzer;
 struct LexicalVertice;
-using Transition = std::pair<LexicalVertice *, char>;
+
+struct Transition
+{
+    LexicalVertice *dstVertice;
+    struct EPS
+    {
+    };
+    struct ANY
+    {
+    };
+    using Symbol = std::variant<EPS, ANY, char>;
+    Symbol symbol;
+};
 
 enum class MetaRuleSymbol
 {
@@ -42,4 +54,3 @@ private:
 };
 
 #endif // LEXICAL_ANALYZER_HPP
-

@@ -3,8 +3,6 @@
 #include <exception>
 #include <stack>
 
-#define EPS '\0'
-
 struct LexicalVertice
 {
     std::vector<Transition> transitions;
@@ -35,9 +33,10 @@ struct Subregex
 
 using MaybeSubregex = std::optional<Subregex>;
 
-static inline void addTransition(LexicalVertice *from, LexicalVertice *to, char transChar)
+static inline void addTransition(LexicalVertice *from, LexicalVertice *to,
+                                 Transition::Symbol transSymbol)
 {
-    from->transitions.push_back(Transition{to, transChar});
+    from->transitions.push_back(Transition{to, transSymbol});
 }
 
 static RuleSymbol getNextRuleSymbol(std::string_view &rule_view)
@@ -115,10 +114,10 @@ static void processAsteriskQuantifier(std::string_view &ruleTail, Subregex &subr
 {
     ruleTail = ruleTail.substr(1);
     auto newBegin = new LexicalVertice(), newEnd = new LexicalVertice();
-    addTransition(newBegin, subregex.begin, EPS);
-    addTransition(newBegin, newEnd, EPS);
-    addTransition(subregex.end, subregex.begin, EPS);
-    addTransition(subregex.end, newEnd, EPS);
+    addTransition(newBegin, subregex.begin, Transition::EPS());
+    addTransition(newBegin, newEnd, Transition::EPS());
+    addTransition(subregex.end, subregex.begin, Transition::EPS());
+    addTransition(subregex.end, newEnd, Transition::EPS());
     subregex.begin = newBegin;
     subregex.end = newEnd;
 }
@@ -127,9 +126,9 @@ static void processPlusQuantifier(std::string_view &ruleTail, Subregex &subregex
 {
     ruleTail = ruleTail.substr(1);
     auto newBegin = new LexicalVertice(), newEnd = new LexicalVertice();
-    addTransition(newBegin, subregex.begin, EPS);
-    addTransition(subregex.end, subregex.begin, EPS);
-    addTransition(subregex.end, newEnd, EPS);
+    addTransition(newBegin, subregex.begin, Transition::EPS());
+    addTransition(subregex.end, subregex.begin, Transition::EPS());
+    addTransition(subregex.end, newEnd, Transition::EPS());
     subregex.begin = newBegin;
     subregex.end = newEnd;
 }
@@ -156,10 +155,19 @@ static void processPossibleQuantifier(std::string_view &ruleTail, Subregex &subr
 
 static MaybeSubregex processSimpleSubregex(std::string_view &ruleTail)
 {
-    const char currChar = ruleTail[0];
-    ruleTail = ruleTail.substr(1);
+    const auto currRuleSymbol = getNextRuleSymbol(ruleTail);
+    ruleTail = ruleTail.substr(currRuleSymbol.width);
     auto currSubregexBegin = new LexicalVertice(), currSubregexEnd = new LexicalVertice();
-    addTransition(currSubregexBegin, currSubregexEnd, currChar);
+    addTransition(currSubregexBegin, currSubregexEnd, [&]() -> Transition::Symbol {
+        if (const char *charSymbol = std::get_if<char>(&currRuleSymbol.symbol)) {
+            return *charSymbol;
+        } else if (const MetaRuleSymbol *metaSymbol =
+                       std::get_if<MetaRuleSymbol>(&currRuleSymbol.symbol);
+                   *metaSymbol == MetaRuleSymbol::DOT) {
+            return Transition::ANY();
+        }
+        abort(); // should never happen
+    }());
     Subregex currSubregex{currSubregexBegin, currSubregexEnd, SubregexType::SIMPLE};
     processPossibleQuantifier(ruleTail, currSubregex);
     return currSubregex;
@@ -181,14 +189,14 @@ static MaybeSubregex processGroupSubregex(std::string_view &ruleTail)
 
         auto childSubregex = processSubregex(ruleTail);
         if (childSubregex) {
-            addTransition(lastChildSubregexEnd, childSubregex->begin, EPS);
+            addTransition(lastChildSubregexEnd, childSubregex->begin, Transition::EPS());
             lastChildSubregexEnd = childSubregex->end;
         } else {
             return std::nullopt;
         }
     }
 
-    addTransition(lastChildSubregexEnd, currSubregexEnd, EPS);
+    addTransition(lastChildSubregexEnd, currSubregexEnd, Transition::EPS());
     Subregex currSubregex{currSubregexBegin, currSubregexEnd, SubregexType::GROUP};
     processPossibleQuantifier(ruleTail, currSubregex);
     return currSubregex;
@@ -209,8 +217,8 @@ static MaybeSubregex processUnionSubregex(std::string_view &ruleTail)
 
         auto childSubregex = processSubregex(ruleTail);
         if (childSubregex) {
-            addTransition(currSubregexBegin, childSubregex->begin, EPS);
-            addTransition(childSubregex->end, currSubregexEnd, EPS);
+            addTransition(currSubregexBegin, childSubregex->begin, Transition::EPS());
+            addTransition(childSubregex->end, currSubregexEnd, Transition::EPS());
         } else {
             return std::nullopt;
         }
@@ -234,6 +242,9 @@ static MaybeSubregex processSubregex(std::string_view &ruleTail)
             }
             case MetaRuleSymbol::BRACKET_OPEN: {
                 return processUnionSubregex(ruleTail);
+            }
+            case MetaRuleSymbol::DOT: {
+                return processSimpleSubregex(ruleTail);
             }
             default: {
                 break;

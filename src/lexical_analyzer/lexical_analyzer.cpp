@@ -1,7 +1,5 @@
 #include "lexical_analyzer.hpp"
 
-#define EPS '\0'
-
 struct LexicalVertice
 {
     std::vector<Transition> transitions;
@@ -20,11 +18,16 @@ static std::pair<size_t, bool> matchMaxRule(std::string_view str, LexicalVertice
     bool isMatched = vertice->isAccepting;
     size_t mx = 0;
     for (auto &trans : vertice->transitions) {
-        if (trans.second == EPS ||
-            (str.size() > 0 && (trans.second == '.' || trans.second == str[0]))) {
-            const auto res = matchMaxRule(str.substr(trans.second != EPS), trans.first);
+        const bool isEPS = std::holds_alternative<Transition::EPS>(trans.symbol);
+        const bool isANY = std::holds_alternative<Transition::ANY>(trans.symbol);
+        auto doesCharMatch = [&](Transition::Symbol transSymbol, char toMatch) {
+            const char *charSymbol = std::get_if<char>(&transSymbol);
+            return charSymbol && *charSymbol == toMatch;
+        };
+        if (isEPS || (str.size() > 0 && (doesCharMatch(trans.symbol, str[0]) || isANY))) {
+            const auto res = matchMaxRule(str.substr(!isEPS), trans.dstVertice);
             if (res.second) {
-                mx = std::max(mx, (trans.second != EPS) + res.first);
+                mx = std::max(mx, !isEPS + res.first);
                 isMatched = true;
             }
         }

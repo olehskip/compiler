@@ -400,6 +400,86 @@ TEST(AsteriskAndUnion, AsteriskMatchesEachCharFromUnion)
     EXPECT_EQ(parseRes[0]->text, toParse);
 }
 
+// ====== Escaped symbols ======
+TEST(EscapedSymbols, EscapedDotMatchesDot)
+{
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("\\.", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(".");
+    ASSERT_EQ(parseRes.size(), 1);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
+    EXPECT_EQ(parseRes[0]->text, ".");
+}
+
+TEST(EscapedSymbols, EscapedDotMatchesCharFail)
+{
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("\\.", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("a");
+    ASSERT_EQ(parseRes.size(), 1);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ERROR);
+}
+
+TEST(EscapedSymbols, EscapedOpenParMatchesOpenPar)
+{
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("\\(", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("(");
+    ASSERT_EQ(parseRes.size(), 1);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
+    EXPECT_EQ(parseRes[0]->text, "(");
+}
+
+TEST(EscapedSymbols, EscapedCloseParMatchesClosePar)
+{
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("\\)", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(")");
+    ASSERT_EQ(parseRes.size(), 1);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
+    EXPECT_EQ(parseRes[0]->text, ")");
+}
+
+TEST(EscapedSymbols, EscapedOpenBracketMatchesOpenBracket)
+{
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("\\[", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("[");
+    ASSERT_EQ(parseRes.size(), 1);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
+    EXPECT_EQ(parseRes[0]->text, "[");
+}
+
+TEST(EscapedSymbols, EscapedCloseBracketMatchesCloseBracket)
+{
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("\\]", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("]");
+    ASSERT_EQ(parseRes.size(), 1);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
+    EXPECT_EQ(parseRes[0]->text, "]");
+}
+
+TEST(EscapedSymbols, EscapedAsterixMatchesAsterix)
+{
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("\\*", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("*");
+    ASSERT_EQ(parseRes.size(), 1);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
+    EXPECT_EQ(parseRes[0]->text, "*");
+}
+
+TEST(EscapedSymbols, EscapedPlusMatchesPlus)
+{
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("\\+", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("+");
+    ASSERT_EQ(parseRes.size(), 1);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
+    EXPECT_EQ(parseRes[0]->text, "+");
+}
+
 // ====== Real tokens ======
 class RealTokens : public ::testing::Test
 {
@@ -407,25 +487,26 @@ protected:
     void SetUp() override
     {
         lexConstructor = std::make_shared<ThompsonConstructor>();
+        lexConstructor->addRule("[0123456789]+\\.[0123456789]+", TerminalSymbol::NUM_LIT);
         lexConstructor->addRule("[0123456789]+", TerminalSymbol::NUM_LIT);
         lexConstructor->addRule(";", TerminalSymbol::SEMICOLON);
     }
     std::shared_ptr<LexicalAnalyzerConstructor> lexConstructor;
 };
 
-TEST_F(RealTokens, IntegersWithSemicolons)
+TEST_F(RealTokens, NumbersWithSemicolons)
 {
-    const vector<std::string> integers = {"0",     "1", "22", "333", "4444",
-                                          "55555", "6", "77", "888", "9999"};
+    const vector<std::string> numbers = {"0.12",  "0.1", "22", "333",   "4444.1234567",
+                                         "55555", "6",   "77", "888.9", "9999.0001"};
     std::string toParse;
-    for (auto integer : integers) {
+    for (auto integer : numbers) {
         toParse += integer + ";";
     }
     const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
     ASSERT_EQ(parseRes.size() % 2, 0);
     for (size_t i = 0; i < parseRes.size(); i += 2) {
         EXPECT_EQ(parseRes[i]->symbolType, TerminalSymbol::NUM_LIT);
-        EXPECT_EQ(parseRes[i]->text, integers[i / 2]);
+        EXPECT_EQ(parseRes[i]->text, numbers[i / 2]);
         EXPECT_EQ(parseRes[i + 1]->symbolType, TerminalSymbol::SEMICOLON);
         EXPECT_EQ(parseRes[i + 1]->text, ";");
     }

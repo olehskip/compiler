@@ -480,6 +480,26 @@ TEST(EscapedSymbols, EscapedPlusMatchesPlus)
     EXPECT_EQ(parseRes[0]->text, "+");
 }
 
+TEST(EscapedSymbols, EscapedBackslashMatchesBackslash)
+{
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("\\\\", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("\\");
+    ASSERT_EQ(parseRes.size(), 1);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
+    EXPECT_EQ(parseRes[0]->text, "\\");
+}
+
+TEST(EscapedSymbols, EscapedBackslashWithLettersMatchesBackslashWithLetters)
+{
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("a\\\\b", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("a\\b");
+    ASSERT_EQ(parseRes.size(), 1);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
+    EXPECT_EQ(parseRes[0]->text, "a\\b");
+}
+
 // ====== Real tokens ======
 class RealTokens : public ::testing::Test
 {
@@ -489,26 +509,45 @@ protected:
         lexConstructor = std::make_shared<ThompsonConstructor>();
         lexConstructor->addRule("[0123456789]+\\.[0123456789]+", TerminalSymbol::NUM_LIT);
         lexConstructor->addRule("[0123456789]+", TerminalSymbol::NUM_LIT);
-        lexConstructor->addRule(";", TerminalSymbol::SEMICOLON);
+        lexConstructor->addRule(" ", TerminalSymbol::BLANK);
+        lexConstructor->addRule("#\\\\" + LexicalAnalyzerConstructor::allLetters + "+",
+                                TerminalSymbol::CHARACTER);
     }
     std::shared_ptr<LexicalAnalyzerConstructor> lexConstructor;
 };
 
-TEST_F(RealTokens, NumbersWithSemicolons)
+TEST_F(RealTokens, NumbersWithSpaces)
 {
     const vector<std::string> numbers = {"0.12",  "0.1", "22", "333",   "4444.1234567",
                                          "55555", "6",   "77", "888.9", "9999.0001"};
     std::string toParse;
     for (auto integer : numbers) {
-        toParse += integer + ";";
+        toParse += integer + " ";
     }
     const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
-    ASSERT_EQ(parseRes.size() % 2, 0);
+    ASSERT_EQ(parseRes.size(), 2 * numbers.size());
     for (size_t i = 0; i < parseRes.size(); i += 2) {
         EXPECT_EQ(parseRes[i]->symbolType, TerminalSymbol::NUM_LIT);
         EXPECT_EQ(parseRes[i]->text, numbers[i / 2]);
-        EXPECT_EQ(parseRes[i + 1]->symbolType, TerminalSymbol::SEMICOLON);
-        EXPECT_EQ(parseRes[i + 1]->text, ";");
+        EXPECT_EQ(parseRes[i + 1]->symbolType, TerminalSymbol::BLANK);
+        EXPECT_EQ(parseRes[i + 1]->text, " ");
+    }
+}
+
+TEST_F(RealTokens, CharsWitHSpaces)
+{
+    const std::string shuffledLetters = "WpXZoyVwmGdrlbCxgQnthqieRPfIkuDcMaBsJLEvAHOzSYFTjUKN";
+    std::string toParse;
+    for (auto ch : shuffledLetters) {
+        toParse += "#\\" + std::string(1, ch) + " ";
+    }
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
+    ASSERT_EQ(parseRes.size(), 2 * shuffledLetters.size());
+    for (size_t i = 0; i < parseRes.size(); i += 2) {
+        EXPECT_EQ(parseRes[i]->symbolType, TerminalSymbol::CHARACTER);
+        EXPECT_EQ(parseRes[i]->text, "#\\" + std::string(1, shuffledLetters[i / 2]));
+        EXPECT_EQ(parseRes[i + 1]->symbolType, TerminalSymbol::BLANK);
+        EXPECT_EQ(parseRes[i + 1]->text, " ");
     }
 }
 

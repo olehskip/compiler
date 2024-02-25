@@ -37,6 +37,9 @@ public:
 
     virtual void addRule(std::string rule, TerminalSymbol tokenToReturn) = 0;
 
+    inline static const std::string allLetters =
+        "[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]";
+
 protected:
     friend LexicalAnalyzer;
     std::vector<std::pair<LexicalVertice *, TerminalSymbol>> firstVertices;

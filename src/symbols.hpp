@@ -27,17 +27,34 @@ enum class TerminalSymbol
     ID,
 
     FINISH,
+
+    TRUE_LIT,
+    FALSE_LIT,
+    CHARACTER,
+    STRING,
+    SYMBOL,
+    NUMBER,
 };
 
 enum class NonTerminalSymbol
 {
     PROGRAM,
+    CALL,
+    FUNC_NAME,
     STMT,
+    STMTS,
     EXPR,
     EPS, // TODO: remove it
     START,
     A,
-    B
+    B,
+
+    DATUM,
+
+    BOOLEAN,
+    LIST,
+    VECTOR,
+    BYTEVECTOR
 };
 
 using Symbol = std::variant<TerminalSymbol, NonTerminalSymbol>;
@@ -72,6 +89,7 @@ class SymbolAst
 {
 public:
     virtual ~SymbolAst(){};
+    auto operator<=>(const SymbolAst &) const = default;
 
     using SharedPtr = std::shared_ptr<SymbolAst>;
 };
@@ -98,6 +116,7 @@ using TerminalSymbolsAst = std::vector<TerminalSymbolAst::SharedPtr>;
 class NonTerminalSymbolAst : public SymbolAst
 {
 public:
+    NonTerminalSymbolAst(NonTerminalSymbol symbolType_) : symbolType(symbolType_), children({}) {}
     NonTerminalSymbolAst(NonTerminalSymbol symbolType_, SymbolsAst children_)
         : symbolType(symbolType_), children(children_)
     {

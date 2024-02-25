@@ -5,8 +5,6 @@
 #include <set>
 #include <stack>
 
-#define EPS Symbol(NonTerminalSymbol::EPS) // TODO: remove it
-
 Item::Item(Rule rule, size_t tPos, Symbol tLookaheadSymbol)
     : Rule(std::move(rule)), pos(tPos), lookaheadSymbol(tLookaheadSymbol)
 {
@@ -287,9 +285,37 @@ void SyntaxAnalyzer::fillStateTables(const State::SharedPtr state)
             abort();
         }
         auto destState = std::make_shared<State>(destStateItems);
+        /*
+         * Consider the case with left recursion:
+         * E->EA; E->A;
+         * At some point we will have a state:
+         * E->E*A|(smth), E->A*|(smth)
+         * The algorithm will try to add a shift decision, so the state becomes:
+         * E->E*A|(smth), E->A*|(smth), E->*EA|(smth), E->*A|(smth)
+         * At some point the algorithm will try to add a decision for symbol A, so the next state:
+         * E->EA*|(smth), E->E*A|(smth), E->A*|(smth)
+         * And here the analyzer will do the closure operation for E and create a similar state to
+         * the previous one(when eventually creting this state again)
+         * hence creating states infinitely.
+         *
+         * While the example may not be 100% accurate, it proves that the algorithm will create
+         * infinite number of states, so let's check whether we already have the same state in the
+         * analyzer. This can be optimized, but it works ok for now.
+         */
+        auto existingStateIt =
+            std::find_if(allStates.begin(), allStates.end(), [&destState](const auto &toCmp) {
+                return toCmp->itemsSet == destState->itemsSet;
+            });
+        const bool doesStateExist = existingStateIt != allStates.end();
+        if (doesStateExist) {
+            destState = *existingStateIt;
+        }
+
         state->addDecision(symbol, ShiftDecision{destState});
         state->addGotoState(symbol, destState);
-        allStates.emplace_back(destState);
-        fillStateTables(destState);
+        if (!doesStateExist) {
+            allStates.emplace_back(destState);
+            fillStateTables(destState);
+        }
     }
 }

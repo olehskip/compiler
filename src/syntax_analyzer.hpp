@@ -103,6 +103,8 @@ private:
     std::set<Symbol> allSymbols;
 
     std::unordered_map<Symbol, SymbolsSet> mFollowCache, mFirstCache;
+
+    const Symbol EPS = Symbol(NonTerminalSymbol::EPS);
 };
 
 #endif // SYNTAX_ANALYZER_HPP

@@ -8,6 +8,10 @@ include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 add_executable(lexical_analyzer_test lexical_analyzer_test.cpp)
 target_link_libraries(lexical_analyzer_test GTest::gtest_main ${COMPILER_LIB_OUTPUT})
 target_include_directories(lexical_analyzer_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-
 gtest_discover_tests(lexical_analyzer_test)
+
+add_executable(lr1_analyzer_test lr1_analyzer_test.cpp)
+target_link_libraries(lr1_analyzer_test GTest::gtest_main ${COMPILER_LIB_OUTPUT})
+target_include_directories(lr1_analyzer_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+gtest_discover_tests(lr1_analyzer_test)
 

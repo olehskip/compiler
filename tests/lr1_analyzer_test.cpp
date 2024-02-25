@@ -125,16 +125,16 @@ TEST(Recursion, RightRecursion)
     syntaxAnalyzer->addRule(NonTerminalSymbol::PROGRAM, {NonTerminalSymbol::EXPR});
     syntaxAnalyzer->addRule(NonTerminalSymbol::EXPR,
                             {TerminalSymbol::ASSIGN_OP, NonTerminalSymbol::EXPR});
-    syntaxAnalyzer->addRule(NonTerminalSymbol::EXPR, {TerminalSymbol::ASSIGN_OP});
+    syntaxAnalyzer->addRule(NonTerminalSymbol::EXPR, {TerminalSymbol::BLANK});
     syntaxAnalyzer->start();
     auto expectedTree = std::make_shared<NonTerminalSymbolAst>(
         NonTerminalSymbol::PROGRAM,
         SymbolsAst{std::make_shared<NonTerminalSymbolAst>(
             NonTerminalSymbol::EXPR,
-            SymbolsAst{std::make_shared<NonTerminalSymbolAst>(
+            SymbolsAst{std::make_shared<TerminalSymbolAst>(TerminalSymbol::ASSIGN_OP, "="),
+                       std::make_shared<NonTerminalSymbolAst>(
                            NonTerminalSymbol::EXPR, SymbolsAst{std::make_shared<TerminalSymbolAst>(
-                                                        TerminalSymbol::ASSIGN_OP, "=")}),
-                       std::make_shared<TerminalSymbolAst>(TerminalSymbol::ASSIGN_OP, "=")})});
+                                                        TerminalSymbol::BLANK, " ")})})});
     auto parseRes = syntaxAnalyzer->parse(flattenAst(expectedTree));
     cmpAstTrees(expectedTree, parseRes);
 }
@@ -146,15 +146,17 @@ TEST(Recursion, LeftRecursion)
     syntaxAnalyzer->addRule(NonTerminalSymbol::PROGRAM, {NonTerminalSymbol::EXPR});
     syntaxAnalyzer->addRule(NonTerminalSymbol::EXPR,
                             {NonTerminalSymbol::EXPR, TerminalSymbol::ASSIGN_OP});
-    syntaxAnalyzer->addRule(NonTerminalSymbol::EXPR, {TerminalSymbol::ASSIGN_OP});
+    syntaxAnalyzer->addRule(NonTerminalSymbol::EXPR, {TerminalSymbol::BLANK});
+    std::cout << "before parsing\n";
     syntaxAnalyzer->start();
+    std::cout << "after parsing\n";
     auto expectedTree = std::make_shared<NonTerminalSymbolAst>(
         NonTerminalSymbol::PROGRAM,
         SymbolsAst{std::make_shared<NonTerminalSymbolAst>(
             NonTerminalSymbol::EXPR,
             SymbolsAst{std::make_shared<NonTerminalSymbolAst>(
                            NonTerminalSymbol::EXPR, SymbolsAst{std::make_shared<TerminalSymbolAst>(
-                                                        TerminalSymbol::ASSIGN_OP, "=")}),
+                                                        TerminalSymbol::BLANK, " ")}),
                        std::make_shared<TerminalSymbolAst>(TerminalSymbol::ASSIGN_OP, "=")})});
     auto parseRes = syntaxAnalyzer->parse(flattenAst(expectedTree));
     cmpAstTrees(expectedTree, parseRes);
@@ -167,21 +169,19 @@ TEST(Recursion, MiddleRecursion)
     syntaxAnalyzer->addRule(NonTerminalSymbol::PROGRAM, {NonTerminalSymbol::EXPR});
     syntaxAnalyzer->addRule(
         NonTerminalSymbol::EXPR,
-        {TerminalSymbol::ASSIGN_OP, NonTerminalSymbol::EXPR, TerminalSymbol::ASSIGN_OP});
-    syntaxAnalyzer->addRule(NonTerminalSymbol::EXPR, {TerminalSymbol::ASSIGN_OP});
+        {TerminalSymbol::ASSIGN_OP, NonTerminalSymbol::EXPR, TerminalSymbol::BLANK});
+    syntaxAnalyzer->addRule(NonTerminalSymbol::EXPR, {TerminalSymbol::ID});
     syntaxAnalyzer->start();
     // TODO: this looks terrible, I need to find a better way to represent it
     auto expectedTree = std::make_shared<NonTerminalSymbolAst>(
         NonTerminalSymbol::PROGRAM,
         SymbolsAst{std::make_shared<NonTerminalSymbolAst>(
             NonTerminalSymbol::EXPR,
-            SymbolsAst{
-                std::make_shared<NonTerminalSymbolAst>(
-                    NonTerminalSymbol::EXPR,
-                    SymbolsAst{
-                        std::make_shared<TerminalSymbolAst>(TerminalSymbol::ASSIGN_OP, "="),
-                        std::make_shared<TerminalSymbolAst>(TerminalSymbol::ASSIGN_OP, "=")}),
-                std::make_shared<TerminalSymbolAst>(TerminalSymbol::ASSIGN_OP, "=")})});
+            SymbolsAst{std::make_shared<TerminalSymbolAst>(TerminalSymbol::ASSIGN_OP, "="),
+                       std::make_shared<NonTerminalSymbolAst>(
+                           NonTerminalSymbol::EXPR, SymbolsAst{std::make_shared<TerminalSymbolAst>(
+                                                        TerminalSymbol::ID, "ID")}),
+                       std::make_shared<TerminalSymbolAst>(TerminalSymbol::BLANK, " ")})});
     auto parseRes = syntaxAnalyzer->parse(flattenAst(expectedTree));
     cmpAstTrees(expectedTree, parseRes);
 }

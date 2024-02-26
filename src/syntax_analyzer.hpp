@@ -80,6 +80,7 @@ public:
     SyntaxAnalyzer(NonTerminalSymbol tStartSymbol, TerminalSymbol tEndSymbol);
 
     void addRule(NonTerminalSymbol lhs, Symbols rhsSymbols);
+    void addRules(NonTerminalSymbol lhs, std::vector<Symbols> rhses);
 
     void start();
     NonTerminalSymbolAst::SharedPtr parse(TerminalSymbolsAst symbols);
@@ -89,6 +90,7 @@ private:
     SymbolsSet first(Symbols symbols);
     SymbolsSet follow(Symbol symbol);
     ItemsSet closure(const ItemsSet &items);
+    ItemsSet closure2(const ItemsSet &items);
     ItemsSet gotoItems(const ItemsSet &itemSet, Symbol symbol);
 
     void fillStateTables(const State::SharedPtr state);

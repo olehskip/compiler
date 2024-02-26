@@ -63,6 +63,13 @@ void SyntaxAnalyzer::addRule(NonTerminalSymbol lhs, Symbols rhs)
     allRulesSet.insert(Rule{lhs, rhs});
 }
 
+void SyntaxAnalyzer::addRules(NonTerminalSymbol lhs, std::vector<Symbols> rhses)
+{
+    for (auto &rhs : rhses) {
+        addRule(lhs, rhs);
+    }
+}
+
 void SyntaxAnalyzer::start()
 {
     ItemsSet startItemsSet;
@@ -218,13 +225,19 @@ SymbolsSet SyntaxAnalyzer::follow(Symbol symbol)
 
 ItemsSet SyntaxAnalyzer::closure(const ItemsSet &itemsSet)
 {
-    ItemsSet resSet = {itemsSet.begin(), itemsSet.end()};
+    ItemsSet resSet;
+    std::stack<Item> toCheck;
+    for (const auto &item : itemsSet) {
+        toCheck.push(item);
+    }
 
-    for (const auto &item : resSet) {
-        if (item.pos >= item.rhs.size()) {
+    while (!toCheck.empty()) {
+        const auto item = toCheck.top();
+        toCheck.pop();
+        if (item.pos == item.rhs.size()) {
             continue;
         }
-        assert(item.pos <= item.rhs.size());
+        assert(item.pos < item.rhs.size());
         const auto &itemCurrSymbol = item.rhs[item.pos];
 
         Symbols itemTail;
@@ -238,9 +251,16 @@ ItemsSet SyntaxAnalyzer::closure(const ItemsSet &itemsSet)
             }
 
             for (const auto &lookaheadSymbol : lookaheadSymbols) {
-                resSet.insert(Item(rule, 0, lookaheadSymbol));
+                const auto newItem = Item(rule, 0, lookaheadSymbol);
+                const bool wasInserted = resSet.insert(newItem).second;
+                if (wasInserted) {
+                    toCheck.push(newItem);
+                }
             }
         }
+    }
+    for (const auto &item : itemsSet) {
+        resSet.insert(item);
     }
 
     return resSet;
@@ -251,9 +271,11 @@ ItemsSet SyntaxAnalyzer::gotoItems(const ItemsSet &itemsSet, Symbol symbol)
     ItemsSet resSet;
 
     for (const auto &item : itemsSet) {
-        const auto itemCurrSymbol = item.rhs[item.pos];
-        if (item.pos != item.rhs.size() && itemCurrSymbol == symbol) {
-            resSet.insert(Item(item, item.pos + 1));
+        if (item.pos != item.rhs.size()) {
+            const auto itemCurrSymbol = item.rhs[item.pos];
+            if (itemCurrSymbol == symbol) {
+                resSet.insert(Item(item, item.pos + 1));
+            }
         }
     }
 
@@ -276,7 +298,7 @@ void SyntaxAnalyzer::fillStateTables(const State::SharedPtr state)
 
     // add shifts
     for (auto symbol : allSymbols) {
-        ItemsSet destStateItems = gotoItems({state->itemsSet}, symbol);
+        ItemsSet destStateItems = gotoItems(state->itemsSet, symbol);
         if (destStateItems.empty()) {
             continue;
         }

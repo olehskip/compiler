@@ -22,8 +22,6 @@ enum class TerminalSymbol
     ASSIGN_OP,
     OPEN_BRACKET,
     CLOSED_BRACKET,
-    NUM_LIT,
-    STR_LIT,
     ID,
 
     FINISH,
@@ -39,17 +37,24 @@ enum class TerminalSymbol
 enum class NonTerminalSymbol
 {
     PROGRAM,
-    CALL,
-    FUNC_NAME,
     STMT,
     STMTS,
+    EXPRS,
     EXPR,
     EPS, // TODO: remove it
-    START,
-    A,
-    B,
 
     DATUM,
+    SIMPLE_DATUM,
+    COMPOUND_DATUM,
+
+    LITERAL,
+
+    PROCEDURE_CALL,
+    OPERATOR,
+    OPERANDS,
+    OPERAND,
+
+    DEFINITION,
 
     BOOLEAN,
     LIST,

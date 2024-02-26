@@ -269,3 +269,10 @@ void ThompsonConstructor::addRule(std::string rule, TerminalSymbol tokenToReturn
     maybeRegex->end->isAccepting = true;
     firstVertices.push_back({maybeRegex->begin, tokenToReturn});
 }
+
+void ThompsonConstructor::addRules(std::vector<std::string> rules, TerminalSymbol tokenToReturn)
+{
+    for (auto &rule : rules) {
+        addRule(rule, tokenToReturn);
+    }
+}

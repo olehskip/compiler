@@ -507,8 +507,10 @@ protected:
     void SetUp() override
     {
         lexConstructor = std::make_shared<ThompsonConstructor>();
-        lexConstructor->addRule("[0123456789]+\\.[0123456789]+", TerminalSymbol::NUM_LIT);
-        lexConstructor->addRule("[0123456789]+", TerminalSymbol::NUM_LIT);
+        lexConstructor->addRule(ThompsonConstructor::allDigits + "+\\." +
+                                    ThompsonConstructor::allDigits + "+",
+                                TerminalSymbol::NUMBER);
+        lexConstructor->addRule(ThompsonConstructor::allDigits + "+", TerminalSymbol::NUMBER);
         lexConstructor->addRule(" ", TerminalSymbol::BLANK);
         lexConstructor->addRule("\n", TerminalSymbol::NEWLINE);
         lexConstructor->addRule(";.*\n", TerminalSymbol::COMMENT);
@@ -529,7 +531,7 @@ TEST_F(RealTokens, NumbersWithSpaces)
     const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
     ASSERT_EQ(parseRes.size(), 2 * numbers.size());
     for (size_t i = 0; i < parseRes.size(); i += 2) {
-        EXPECT_EQ(parseRes[i]->symbolType, TerminalSymbol::NUM_LIT);
+        EXPECT_EQ(parseRes[i]->symbolType, TerminalSymbol::NUMBER);
         EXPECT_EQ(parseRes[i]->text, numbers[i / 2]);
         EXPECT_EQ(parseRes[i + 1]->symbolType, TerminalSymbol::BLANK);
         EXPECT_EQ(parseRes[i + 1]->text, " ");
@@ -558,10 +560,10 @@ TEST_F(RealTokens, Comment)
     const std::string toParse = "1\n;123 asdf 1234234\n2";
     const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
     ASSERT_EQ(parseRes.size(), 4);
-    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::NUM_LIT);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::NUMBER);
     EXPECT_EQ(parseRes[1]->symbolType, TerminalSymbol::NEWLINE);
     EXPECT_EQ(parseRes[2]->symbolType, TerminalSymbol::COMMENT);
-    EXPECT_EQ(parseRes[3]->symbolType, TerminalSymbol::NUM_LIT);
+    EXPECT_EQ(parseRes[3]->symbolType, TerminalSymbol::NUMBER);
 }
 
 int main(int argc, char **argv)

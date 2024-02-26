@@ -82,16 +82,16 @@ TEST(Simple, SeveralRulesSingleSymbol)
     auto syntaxAnalyzer =
         std::make_shared<SyntaxAnalyzer>(NonTerminalSymbol::PROGRAM, TerminalSymbol::FINISH);
     syntaxAnalyzer->addRule(NonTerminalSymbol::PROGRAM, {NonTerminalSymbol::EXPR});
-    syntaxAnalyzer->addRule(NonTerminalSymbol::EXPR, {NonTerminalSymbol::CALL});
-    syntaxAnalyzer->addRule(NonTerminalSymbol::CALL, {TerminalSymbol::ASSIGN_OP});
+    syntaxAnalyzer->addRule(NonTerminalSymbol::EXPR, {NonTerminalSymbol::PROCEDURE_CALL});
+    syntaxAnalyzer->addRule(NonTerminalSymbol::PROCEDURE_CALL, {TerminalSymbol::ASSIGN_OP});
     syntaxAnalyzer->start();
     auto expectedTree = std::make_shared<NonTerminalSymbolAst>(
         NonTerminalSymbol::PROGRAM,
         SymbolsAst{std::make_shared<NonTerminalSymbolAst>(
             NonTerminalSymbol::EXPR,
             SymbolsAst{std::make_shared<NonTerminalSymbolAst>(
-                NonTerminalSymbol::CALL, SymbolsAst{std::make_shared<TerminalSymbolAst>(
-                                             TerminalSymbol::ASSIGN_OP, "=")})})});
+                NonTerminalSymbol::PROCEDURE_CALL, SymbolsAst{std::make_shared<TerminalSymbolAst>(
+                                                       TerminalSymbol::ASSIGN_OP, "=")})})});
     auto parseRes = syntaxAnalyzer->parse(flattenAst(expectedTree));
     cmpAstTrees(expectedTree, parseRes);
 }
@@ -102,8 +102,8 @@ TEST(Simple, SeveralRulesSeveralSymbols)
         std::make_shared<SyntaxAnalyzer>(NonTerminalSymbol::PROGRAM, TerminalSymbol::FINISH);
     syntaxAnalyzer->addRule(NonTerminalSymbol::PROGRAM, {NonTerminalSymbol::EXPR});
     syntaxAnalyzer->addRule(NonTerminalSymbol::EXPR,
-                            {NonTerminalSymbol::CALL, TerminalSymbol::BLANK});
-    syntaxAnalyzer->addRule(NonTerminalSymbol::CALL, {TerminalSymbol::ASSIGN_OP});
+                            {NonTerminalSymbol::PROCEDURE_CALL, TerminalSymbol::BLANK});
+    syntaxAnalyzer->addRule(NonTerminalSymbol::PROCEDURE_CALL, {TerminalSymbol::ASSIGN_OP});
     syntaxAnalyzer->start();
     // TODO: this looks terrible, I need to find a better way to represent it
     auto expectedTree = std::make_shared<NonTerminalSymbolAst>(
@@ -111,8 +111,9 @@ TEST(Simple, SeveralRulesSeveralSymbols)
         SymbolsAst{std::make_shared<NonTerminalSymbolAst>(
             NonTerminalSymbol::EXPR,
             SymbolsAst{std::make_shared<NonTerminalSymbolAst>(
-                           NonTerminalSymbol::CALL, SymbolsAst{std::make_shared<TerminalSymbolAst>(
-                                                        TerminalSymbol::ASSIGN_OP, "=")}),
+                           NonTerminalSymbol::PROCEDURE_CALL,
+                           SymbolsAst{std::make_shared<TerminalSymbolAst>(TerminalSymbol::ASSIGN_OP,
+                                                                          "=")}),
                        std::make_shared<TerminalSymbolAst>(TerminalSymbol::BLANK, "")})});
     auto parseRes = syntaxAnalyzer->parse(flattenAst(expectedTree));
     cmpAstTrees(expectedTree, parseRes);

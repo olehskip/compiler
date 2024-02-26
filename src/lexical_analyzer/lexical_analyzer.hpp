@@ -36,9 +36,12 @@ public:
     virtual ~LexicalAnalyzerConstructor() = 0;
 
     virtual void addRule(std::string rule, TerminalSymbol tokenToReturn) = 0;
+    virtual void addRules(std::vector<std::string> rules, TerminalSymbol tokenToReturn) = 0;
 
     inline static const std::string allLetters =
         "[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]";
+    inline static const std::string allDigits = "[0123456789]";
+    inline static const std::string allLettersAndDigits = "[" + allLetters + allDigits + "]";
 
 protected:
     friend LexicalAnalyzer;

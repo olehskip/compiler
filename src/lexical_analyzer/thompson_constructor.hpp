@@ -10,6 +10,7 @@ public:
     ~ThompsonConstructor() override;
 
     void addRule(std::string rule, TerminalSymbol tokenToReturn) override;
+    void addRules(std::vector<std::string> rules, TerminalSymbol tokenToReturn) override;
 };
 
 #endif // THOMPSON_ANALYZER_HPP

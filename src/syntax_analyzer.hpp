@@ -83,7 +83,7 @@ public:
     void addRules(NonTerminalSymbol lhs, std::vector<Symbols> rhses);
 
     void start();
-    NonTerminalSymbolAst::SharedPtr parse(TerminalSymbolsAst symbols);
+    NonTerminalSymbolSt::SharedPtr parse(TerminalSymbolsSt symbols);
 
 private:
     SymbolsSet first(Symbol symbol);

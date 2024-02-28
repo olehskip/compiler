@@ -86,9 +86,9 @@ void SyntaxAnalyzer::start()
     fillStateTables(startState);
 }
 
-NonTerminalSymbolAst::SharedPtr SyntaxAnalyzer::parse(TerminalSymbolsAst symbols)
+NonTerminalSymbolSt::SharedPtr SyntaxAnalyzer::parse(TerminalSymbolsSt symbols)
 {
-    std::stack<std::pair<State::SharedPtr, SymbolAst::SharedPtr>> statesStack;
+    std::stack<std::pair<State::SharedPtr, SymbolSt::SharedPtr>> statesStack;
     statesStack.push({startState, nullptr});
     size_t currSymbolPos = 0;
 
@@ -106,7 +106,7 @@ NonTerminalSymbolAst::SharedPtr SyntaxAnalyzer::parse(TerminalSymbolsAst symbols
 
         if (auto reduceDecision = tryConvertDecision<ReduceDecision>(decision)) {
             assert(statesStack.size() > reduceDecision->rhs.size());
-            SymbolsAst symbolsChildren;
+            SymbolsSt symbolsChildren;
             for (size_t i = 0; i < reduceDecision->rhs.size(); ++i) {
                 assert(statesStack.top().second);
                 symbolsChildren.push_back(statesStack.top().second);
@@ -114,8 +114,11 @@ NonTerminalSymbolAst::SharedPtr SyntaxAnalyzer::parse(TerminalSymbolsAst symbols
             }
 
             std::reverse(symbolsChildren.begin(), symbolsChildren.end());
-            NonTerminalSymbolAst::SharedPtr newSymbolAst =
-                std::make_shared<NonTerminalSymbolAst>(reduceDecision->lhs, symbolsChildren);
+            NonTerminalSymbolSt::SharedPtr newSymbolAst =
+                std::make_shared<NonTerminalSymbolSt>(reduceDecision->lhs, symbolsChildren);
+            // for (auto children: symbolsChildren) {
+            //     children->parent = newSymbolAst;
+            // }
             if (reduceDecision->lhs == startSymbol) {
                 assert(statesStack.size() == 1);
                 assert(currSymbolPos == symbols.size() - 1);
@@ -125,7 +128,7 @@ NonTerminalSymbolAst::SharedPtr SyntaxAnalyzer::parse(TerminalSymbolsAst symbols
             auto nextState = statesStack.top().first->getGotoState(reduceDecision->lhs);
             statesStack.push({nextState, newSymbolAst});
         } else if (auto shiftDecision = tryConvertDecision<ShiftDecision>(decision)) {
-            TerminalSymbolAst::SharedPtr newSymbolAst = std::make_shared<TerminalSymbolAst>(
+            TerminalSymbolSt::SharedPtr newSymbolAst = std::make_shared<TerminalSymbolSt>(
                 symbols[currSymbolPos]->symbolType, symbols[currSymbolPos]->text);
             statesStack.push({shiftDecision->state, newSymbolAst});
             currSymbolPos++;

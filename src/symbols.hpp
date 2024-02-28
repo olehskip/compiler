@@ -65,6 +65,7 @@ enum class NonTerminalSymbol
 using Symbol = std::variant<TerminalSymbol, NonTerminalSymbol>;
 using Symbols = std::vector<Symbol>;
 using SymbolsSet = std::set<Symbol>;
+using NonTerminalsSet = std::set<NonTerminalSymbol>;
 
 inline bool isTerminal(Symbol symbol)
 {
@@ -90,48 +91,50 @@ inline std::string getSymbolName(Symbol symbol)
     return res;
 }
 
-class SymbolAst
+class NonTerminalSymbolSt;
+class SymbolSt
 {
 public:
-    virtual ~SymbolAst(){};
-    auto operator<=>(const SymbolAst &) const = default;
+    virtual ~SymbolSt(){};
+    auto operator<=>(const SymbolSt &) const = default;
 
-    using SharedPtr = std::shared_ptr<SymbolAst>;
+    // std::shared_ptr<NonTerminalSymbolSt> parent = nullptr;
+    using SharedPtr = std::shared_ptr<SymbolSt>;
 };
 
-using SymbolsAst = std::vector<SymbolAst::SharedPtr>;
+using SymbolsSt = std::vector<SymbolSt::SharedPtr>;
 
-class TerminalSymbolAst : public SymbolAst
+class TerminalSymbolSt : public SymbolSt
 {
 public:
-    TerminalSymbolAst(TerminalSymbol symbolType_, std::string text_)
+    TerminalSymbolSt(TerminalSymbol symbolType_, std::string text_)
         : symbolType(symbolType_), text(std::move(text_))
     {
     }
-    ~TerminalSymbolAst() {}
+    ~TerminalSymbolSt() {}
 
     const TerminalSymbol symbolType;
     const std::string text;
 
-    using SharedPtr = std::shared_ptr<TerminalSymbolAst>;
+    using SharedPtr = std::shared_ptr<TerminalSymbolSt>;
 };
 
-using TerminalSymbolsAst = std::vector<TerminalSymbolAst::SharedPtr>;
+using TerminalSymbolsSt = std::vector<TerminalSymbolSt::SharedPtr>;
 
-class NonTerminalSymbolAst : public SymbolAst
+class NonTerminalSymbolSt : public SymbolSt
 {
 public:
-    NonTerminalSymbolAst(NonTerminalSymbol symbolType_) : symbolType(symbolType_), children({}) {}
-    NonTerminalSymbolAst(NonTerminalSymbol symbolType_, SymbolsAst children_)
+    NonTerminalSymbolSt(NonTerminalSymbol symbolType_) : symbolType(symbolType_), children({}) {}
+    NonTerminalSymbolSt(NonTerminalSymbol symbolType_, SymbolsSt children_)
         : symbolType(symbolType_), children(children_)
     {
     }
-    ~NonTerminalSymbolAst() {}
+    ~NonTerminalSymbolSt() {}
 
     const NonTerminalSymbol symbolType;
-    SymbolsAst children;
+    SymbolsSt children;
 
-    using SharedPtr = std::shared_ptr<NonTerminalSymbolAst>;
+    using SharedPtr = std::shared_ptr<NonTerminalSymbolSt>;
 };
 
 #endif // SYMBOLS_H

@@ -53,7 +53,7 @@ class LexicalAnalyzer
 public:
     LexicalAnalyzer(std::shared_ptr<LexicalAnalyzerConstructor> constructor_);
 
-    TerminalSymbolsAst parse(std::string toParse);
+    TerminalSymbolsSt parse(std::string toParse);
 
 private:
     const std::shared_ptr<LexicalAnalyzerConstructor> constructor;

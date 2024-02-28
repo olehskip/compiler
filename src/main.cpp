@@ -1,46 +1,10 @@
 #include "lexical_analyzer/thompson_constructor.hpp"
+#include "parser_utils.hpp"
 #include "symbols.hpp"
 #include "syntax_analyzer.hpp"
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <queue>
-
-void astPrinter(SymbolAst::SharedPtr symbolAst, std::string prefix)
-{
-    std::queue<SymbolAst::SharedPtr> q, qn;
-    q.push(symbolAst);
-    // std::cout << prefix << "{" << getSymbolName(symbolAst->symbolType) << "}\n";
-    std::cout << "\n" << prefix;
-    if (auto terminalSymbol = std::dynamic_pointer_cast<TerminalSymbolAst>(symbolAst)) {
-        std::cout << "<" << getSymbolName(terminalSymbol->symbolType) << "|" << terminalSymbol->text
-                  << ">";
-    } else if (auto nonTerminalSymbol =
-                   std::dynamic_pointer_cast<NonTerminalSymbolAst>(symbolAst)) {
-        for (auto child : nonTerminalSymbol->children) {
-            std::cout << getSymbolName(nonTerminalSymbol->symbolType) << "; ";
-            astPrinter(child, prefix + "-");
-        }
-    } else {
-        std::cout << "\nsomething is wrong\n";
-        abort();
-    }
-}
-
-static void removeBlankTerminals(TerminalSymbolsAst &terminalSymbolsAst)
-{
-    std::erase_if(terminalSymbolsAst, [](auto &symbol) {
-        return symbol->symbolType == TerminalSymbol::BLANK ||
-               symbol->symbolType == TerminalSymbol::NEWLINE;
-    });
-}
-
-static void assertNoLexicalErrors(const TerminalSymbolsAst &terminalSymbolsAst)
-{
-    for (const auto &terminalSymbolAst : terminalSymbolsAst) {
-        assert(terminalSymbolAst->symbolType != TerminalSymbol::ERROR);
-    }
-}
 
 static std::string readCode(std::string filePath)
 {
@@ -85,7 +49,7 @@ int main(int argc, char *argv[])
     syntaxAnalyzer.addRule(NonTerminalSymbol::PROCEDURE_CALL,
                            {TerminalSymbol::OPEN_BRACKET, NonTerminalSymbol::OPERATOR,
                             NonTerminalSymbol::OPERANDS, TerminalSymbol::CLOSED_BRACKET});
-    syntaxAnalyzer.addRule(NonTerminalSymbol::OPERATOR, {NonTerminalSymbol::EXPR});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::OPERATOR, {TerminalSymbol::ID});
     syntaxAnalyzer.addRules(
         NonTerminalSymbol::OPERANDS,
         {{NonTerminalSymbol::OPERANDS, NonTerminalSymbol::OPERAND}, {NonTerminalSymbol::OPERAND}});
@@ -104,11 +68,13 @@ int main(int argc, char *argv[])
     std::cout << "code = \n" << std::quoted(code) << "\n";
 
     auto lexicalRet = lexicalAnalyzer.parse(code);
-    lexicalRet.push_back(std::make_shared<TerminalSymbolAst>(TerminalSymbol::FINISH, ""));
-    removeBlankTerminals(lexicalRet);
-    assertNoLexicalErrors(lexicalRet);
+    lexicalRet.push_back(std::make_shared<TerminalSymbolSt>(TerminalSymbol::FINISH, ""));
+    removeBlankNewlineTerminals(lexicalRet);
+    assert(!isLexicalError(lexicalRet));
     auto syntaxRet = syntaxAnalyzer.parse(lexicalRet);
     assert(syntaxRet);
     std::cout << "successfully parsed\n";
+    auto ast = convertToAst(syntaxRet);
+
     return 0;
 }

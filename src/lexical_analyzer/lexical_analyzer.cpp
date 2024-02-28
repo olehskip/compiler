@@ -36,9 +36,9 @@ static std::pair<size_t, bool> matchMaxRule(std::string_view str, LexicalVertice
     return {isMatched ? mx : 0, isMatched};
 }
 
-TerminalSymbolsAst LexicalAnalyzer::parse(std::string toParse)
+TerminalSymbolsSt LexicalAnalyzer::parse(std::string toParse)
 {
-    TerminalSymbolsAst tokens;
+    TerminalSymbolsSt tokens;
     std::string_view view = toParse;
     size_t maxRuleMatched = 0;
     do {
@@ -52,7 +52,7 @@ TerminalSymbolsAst LexicalAnalyzer::parse(std::string toParse)
                 maxRuleMatched = curr;
             }
         }
-        tokens.push_back(std::make_shared<TerminalSymbolAst>(
+        tokens.push_back(std::make_shared<TerminalSymbolSt>(
             currentToken, std::string(view.substr(0, maxRuleMatched))));
         view = view.substr(maxRuleMatched);
     } while (view.size() > 0 && maxRuleMatched > 0);

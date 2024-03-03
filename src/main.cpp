@@ -12,6 +12,29 @@ static std::string readCode(std::string filePath)
     return std::string((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
 }
 
+void printAst(AstNode::SharedPtr astNode)
+{
+    if (auto astProgram = std::dynamic_pointer_cast<AstProgram>(astNode)) {
+        std::cout << '"' << "[PROGRAM] " << astProgram.get() << '"' << "\n";
+        for (auto child : astProgram->children) {
+            std::cout << '"' << "[PROGRAM] " << astProgram.get() << '"' << " -> ";
+            printAst(child);
+        }
+    } else if (auto astProcedure = std::dynamic_pointer_cast<AstProcedureCall>(astNode)) {
+        std::cout << '"' << "[PROCEDURE] " << astNode.get() << " " << astProcedure->name << '"'
+                  << "\n";
+        for (auto child : astProcedure->children) {
+            std::cout << '"' << "[PROCEDURE] " << astNode.get() << " " << astProcedure->name << '"'
+                      << " -> ";
+            printAst(child);
+        }
+    } else if (auto astId = std::dynamic_pointer_cast<AstId>(astNode)) {
+        std::cout << '"' << "[ID] " << astNode.get() << " " << astId->name << '"' << "\n";
+    } else if (auto astNum = std::dynamic_pointer_cast<AstNum>(astNode)) {
+        std::cout << '"' << "[NUM] " << astNode.get() << " " << astNum->num << '"' << "\n";
+    }
+}
+
 int main(int argc, char *argv[])
 {
     assert(argc == 2);
@@ -75,6 +98,7 @@ int main(int argc, char *argv[])
     assert(syntaxRet);
     std::cout << "successfully parsed\n";
     auto ast = convertToAst(syntaxRet);
+    printAst(ast);
 
     return 0;
 }

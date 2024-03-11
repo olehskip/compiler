@@ -1,3 +1,4 @@
+#include "inter_code_generator.hpp"
 #include "lexical_analyzer/thompson_constructor.hpp"
 #include "parser_utils.hpp"
 #include "symbols.hpp"
@@ -15,17 +16,19 @@ static std::string readCode(std::string filePath)
 void printAst(AstNode::SharedPtr astNode)
 {
     if (auto astProgram = std::dynamic_pointer_cast<AstProgram>(astNode)) {
-        std::cout << '"' << "[PROGRAM] " << astProgram.get() << '"' << "\n";
+        // std::cout << '"' << "[PROGRAM] " << astProgram.get() << '"' << "\n";
+        std::cout << "digraph G {\n";
         for (auto child : astProgram->children) {
-            std::cout << '"' << "[PROGRAM] " << astProgram.get() << '"' << " -> ";
+            std::cout << "\t" << '"' << "[PROGRAM] " << astProgram.get() << '"' << " -> ";
             printAst(child);
         }
+        std::cout << "}\n";
     } else if (auto astProcedure = std::dynamic_pointer_cast<AstProcedureCall>(astNode)) {
         std::cout << '"' << "[PROCEDURE] " << astNode.get() << " " << astProcedure->name << '"'
                   << "\n";
         for (auto child : astProcedure->children) {
-            std::cout << '"' << "[PROCEDURE] " << astNode.get() << " " << astProcedure->name << '"'
-                      << " -> ";
+            std::cout << "\t" << '"' << "[PROCEDURE] " << astNode.get() << " " << astProcedure->name
+                      << '"' << " -> ";
             printAst(child);
         }
     } else if (auto astId = std::dynamic_pointer_cast<AstId>(astNode)) {
@@ -57,7 +60,7 @@ int main(int argc, char *argv[])
     thompsonConstructor->addRule(ThompsonConstructor::allDigits, TerminalSymbol::NUMBER);
     thompsonConstructor->addRule(" +", TerminalSymbol::BLANK);
     thompsonConstructor->addRule("\n+", TerminalSymbol::NEWLINE);
-    std::cout << "lexer rules were added" << std::endl;
+    std::cout << "Lexer rules were added" << std::endl;
 
     LexicalAnalyzer lexicalAnalyzer(thompsonConstructor);
 
@@ -85,20 +88,25 @@ int main(int argc, char *argv[])
                                                          {TerminalSymbol::STRING}});
 
     syntaxAnalyzer.start();
-    std::cout << "syntax rules were added" << std::endl;
+    std::cout << "Syntax rules were added" << std::endl;
 
     const std::string code = readCode(argv[1]);
-    std::cout << "code = \n" << std::quoted(code) << "\n";
+    std::cout << "Code filepath = " << argv[1] << "; code:\n" << std::quoted(code) << "\n";
 
     auto lexicalRet = lexicalAnalyzer.parse(code);
     lexicalRet.push_back(std::make_shared<TerminalSymbolSt>(TerminalSymbol::FINISH, ""));
     removeBlankNewlineTerminals(lexicalRet);
     assert(!isLexicalError(lexicalRet));
+    std::cout << "Code was successfully parsed by lexical analyzer\n";
     auto syntaxRet = syntaxAnalyzer.parse(lexicalRet);
     assert(syntaxRet);
-    std::cout << "successfully parsed\n";
-    auto ast = convertToAst(syntaxRet);
-    printAst(ast);
+    std::cout << "Code was successfully parsed by syntax analyzer\n";
+    std::cout << "Code was successfully fully parsed\n";
 
+    auto ast = convertToAst(syntaxRet);
+    std::cout << "\nAST:\n";
+    printAst(ast);
+    std::cout << "\n";
+    generateSsaSeq(ast);
     return 0;
 }

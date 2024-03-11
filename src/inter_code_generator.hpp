@@ -10,15 +10,19 @@
 
 class Procedure;
 
-using VarIdx = uint64_t;
+using FormIdx = uint64_t;
+using VarContent = int64_t;
 
 class SymbolTable
 {
 public:
     using SharedPtr = std::shared_ptr<SymbolTable>;
 
+    FormIdx putNewVar(VarContent varContent);
+
     std::unordered_map<std::string, Procedure> proceduresTable;
-    std::unordered_map<VarIdx, int> variablesTable;
+    // std::unordered_map<VarIdx, VarContent> variablesTable;
+    std::vector<VarContent> variablesTable;
 };
 
 enum class SsaOp
@@ -28,44 +32,75 @@ enum class SsaOp
 
 enum class SsaFormType
 {
-    ASSIGN,
+    ASSIGN_LITERAL,
+    OPERATION,
     CALL,
+    PARAM,
 };
 
 class SsaForm
 {
 public:
     const SsaFormType formType;
+    virtual ~SsaForm() {}
 
 protected:
     SsaForm(SsaFormType formType_) : formType(formType_) {}
 };
 
-class SsaAssign : public SsaForm
+class SsaAssignLiteral : public SsaForm
 {
 public:
-    SsaAssign(VarIdx outputVar_, VarIdx firstVar_, SsaOp op_, VarIdx secondVar_)
-        : SsaForm(SsaFormType::ASSIGN), outputVar(outputVar_), firstVar(firstVar_), op(op_),
-          secondVar(secondVar_)
+    SsaAssignLiteral(VarContent literal_) : SsaForm(SsaFormType::ASSIGN_LITERAL), literal(literal_)
     {
     }
-    VarIdx outputVar;
-    VarIdx firstVar;
+    const VarContent literal;
+};
+
+class SsaOperation : public SsaForm
+{
+public:
+    SsaOperation(FormIdx firstVar_, SsaOp op_, FormIdx secondVar_)
+        : SsaForm(SsaFormType::OPERATION), firstVar(firstVar_), op(op_), secondVar(secondVar_)
+    {
+    }
+    FormIdx firstVar;
     SsaOp op;
-    VarIdx secondVar;
+    FormIdx secondVar;
+};
+
+class SsaParam : public SsaForm
+{
+public:
+    SsaParam(FormIdx var_) : SsaForm(SsaFormType::PARAM), var(var_) {}
+    FormIdx var;
+};
+
+class SsaCall : public SsaForm
+{
+public:
+    SsaCall(std::string procedureName_, unsigned int paramsCnt_)
+        : SsaForm(SsaFormType::CALL), procedureName(procedureName_), paramsCnt(paramsCnt_)
+    {
+    }
+    FormIdx outputVar;
+    std::string procedureName;
+    unsigned int paramsCnt;
 };
 
 class SsaSeq
 {
 public:
     SymbolTable::SharedPtr symbolTable;
-    std::vector<SsaForm> forms;
+    std::vector<std::shared_ptr<SsaForm>> forms;
+    void print();
 };
 
 class Procedure
 {
 public:
     std::string name;
+    FormIdx outputVar;
     unsigned int paramsCnt;
     SymbolTable::SharedPtr symbolTable;
     SsaSeq ssaSeq;

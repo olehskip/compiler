@@ -14,6 +14,7 @@ set(SOURCES
 	src/lexical_analyzer/thompson_constructor.cpp
     src/syntax_analyzer.cpp
     src/parser_utils.cpp
+    src/inter_code_generator.cpp
 )
 
 add_library(${COMPILER_LIB_OUTPUT} STATIC ${SOURCES})

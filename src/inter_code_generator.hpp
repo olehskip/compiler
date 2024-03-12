@@ -93,7 +93,7 @@ class SsaSeq
 public:
     SymbolTable::SharedPtr symbolTable;
     std::vector<std::shared_ptr<SsaForm>> forms;
-    void print();
+    void pretty(std::stringstream &stream);
 };
 
 class Procedure

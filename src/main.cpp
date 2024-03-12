@@ -3,6 +3,8 @@
 #include "parser_utils.hpp"
 #include "symbols.hpp"
 #include "syntax_analyzer.hpp"
+#include "x64_nasm_generator.hpp"
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -13,34 +15,63 @@ static std::string readCode(std::string filePath)
     return std::string((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
 }
 
-void printAst(AstNode::SharedPtr astNode)
+static void prettyAst(AstNode::SharedPtr astNode, std::stringstream &stream)
 {
+    const auto id = std::to_string((unsigned long long)astNode.get());
     if (auto astProgram = std::dynamic_pointer_cast<AstProgram>(astNode)) {
-        // std::cout << '"' << "[PROGRAM] " << astProgram.get() << '"' << "\n";
-        std::cout << "digraph G {\n";
+        stream << "digraph G {\n";
         for (auto child : astProgram->children) {
-            std::cout << "\t" << '"' << "[PROGRAM] " << astProgram.get() << '"' << " -> ";
-            printAst(child);
+            stream << "\t" << '"' << "[PROGRAM] " << id << '"' << " -> ";
+            prettyAst(child, stream);
         }
-        std::cout << "}\n";
+        stream << "}\n";
     } else if (auto astProcedure = std::dynamic_pointer_cast<AstProcedureCall>(astNode)) {
-        std::cout << '"' << "[PROCEDURE] " << astNode.get() << " " << astProcedure->name << '"'
-                  << "\n";
+        stream << '"' << "[PROCEDURE] " << id << " " << astProcedure->name << '"' << "\n";
         for (auto child : astProcedure->children) {
-            std::cout << "\t" << '"' << "[PROCEDURE] " << astNode.get() << " " << astProcedure->name
-                      << '"' << " -> ";
-            printAst(child);
+            stream << "\t" << '"' << "[PROCEDURE] " << id << " " << astProcedure->name << '"'
+                   << " -> ";
+            prettyAst(child, stream);
         }
     } else if (auto astId = std::dynamic_pointer_cast<AstId>(astNode)) {
-        std::cout << '"' << "[ID] " << astNode.get() << " " << astId->name << '"' << "\n";
+        stream << '"' << "[ID] " << id << " " << astId->name << '"' << "\n";
     } else if (auto astNum = std::dynamic_pointer_cast<AstNum>(astNode)) {
-        std::cout << '"' << "[NUM] " << astNode.get() << " " << astNum->num << '"' << "\n";
+        stream << '"' << "[NUM] " << id << " " << astNum->num << '"' << "\n";
     }
+}
+
+static void saveAst(AstProgram::SharedPtr astNode, std::string filepath)
+{
+    std::stringstream stream;
+    prettyAst(astNode, stream);
+    std::ofstream file(filepath);
+    file << stream.rdbuf();
+    file.close();
+}
+
+void saveSeq(SsaSeq &seq, std::string filepath)
+{
+    std::stringstream stream;
+    seq.pretty(stream);
+    std::ofstream file(filepath);
+    file << stream.rdbuf();
+    file.close();
+}
+
+void saveNasm(std::stringstream &stream, std::string filepath)
+{
+    std::ofstream file(filepath);
+    file << stream.rdbuf();
+    file.close();
 }
 
 int main(int argc, char *argv[])
 {
-    assert(argc == 2);
+    assert(argc == 3);
+    const std::string inputPath = argv[1], outputPath = argv[2];
+    std::cout << "Input file path = " << inputPath << "\n";
+    std::cout << "Output folder path = " << outputPath << "\n";
+    std::filesystem::create_directories(outputPath);
+
     std::shared_ptr<ThompsonConstructor> thompsonConstructor =
         std::make_shared<ThompsonConstructor>();
     thompsonConstructor->addRule("#[tT]", TerminalSymbol::TRUE_LIT);
@@ -60,7 +91,7 @@ int main(int argc, char *argv[])
     thompsonConstructor->addRule(ThompsonConstructor::allDigits, TerminalSymbol::NUMBER);
     thompsonConstructor->addRule(" +", TerminalSymbol::BLANK);
     thompsonConstructor->addRule("\n+", TerminalSymbol::NEWLINE);
-    std::cout << "Lexer rules were added" << std::endl;
+    std::cout << "Lexer rules were added\n";
 
     LexicalAnalyzer lexicalAnalyzer(thompsonConstructor);
 
@@ -88,10 +119,10 @@ int main(int argc, char *argv[])
                                                          {TerminalSymbol::STRING}});
 
     syntaxAnalyzer.start();
-    std::cout << "Syntax rules were added" << std::endl;
+    std::cout << "Syntax rules were added\n";
 
-    const std::string code = readCode(argv[1]);
-    std::cout << "Code filepath = " << argv[1] << "; code:\n" << std::quoted(code) << "\n";
+    const std::string code = readCode(inputPath);
+    std::cout << "Code was read\n";
 
     auto lexicalRet = lexicalAnalyzer.parse(code);
     lexicalRet.push_back(std::make_shared<TerminalSymbolSt>(TerminalSymbol::FINISH, ""));
@@ -104,9 +135,17 @@ int main(int argc, char *argv[])
     std::cout << "Code was successfully fully parsed\n";
 
     auto ast = convertToAst(syntaxRet);
-    std::cout << "\nAST:\n";
-    printAst(ast);
-    std::cout << "\n";
-    generateSsaSeq(ast);
+    saveAst(ast, outputPath + "/ast.txt");
+    std::cout << "Ast was saved\n";
+
+    auto ssaSeq = generateSsaSeq(ast);
+    saveSeq(ssaSeq, outputPath + "/ssa.txt");
+    std::cout << "SSA sequence was saved\n";
+
+    std::stringstream nasm;
+    generateX64Asm(ssaSeq, nasm);
+    saveNasm(nasm, outputPath + "/output.nasm");
+    std::cout << "Nasm code was saved\n";
+
     return 0;
 }

@@ -2,8 +2,8 @@
 
 #include <cassert>
 #include <functional>
-#include <iostream>
 #include <optional>
+#include <sstream>
 
 // void SsaSeq::append(const SsaSeq &anotherSeq)
 // {
@@ -18,17 +18,17 @@ FormIdx SymbolTable::putNewVar(VarContent varContent)
     return newVarIdx;
 }
 
-void SsaSeq::print()
+void SsaSeq::pretty(std::stringstream &stream)
 {
     for (size_t idx = 0; idx < forms.size(); ++idx) {
         auto form = forms[idx];
-        std::cout << "[" << idx << "] ";
+        stream << "[" << idx << "] ";
         if (auto ssaCall = std::dynamic_pointer_cast<SsaCall>(form)) {
-            std::cout << "CALL " << ssaCall->procedureName << " " << ssaCall->paramsCnt << "\n";
+            stream << "CALL " << ssaCall->procedureName << " " << ssaCall->paramsCnt << "\n";
         } else if (auto ssaAssignLiteral = std::dynamic_pointer_cast<SsaAssignLiteral>(form)) {
-            std::cout << "ASSIGN_LITERAL " << ssaAssignLiteral->literal << "\n";
+            stream << "ASSIGN_LITERAL " << ssaAssignLiteral->literal << "\n";
         } else if (auto ssaParam = std::dynamic_pointer_cast<SsaParam>(form)) {
-            std::cout << "PARAM " << ssaParam->var << "\n";
+            stream << "PARAM " << ssaParam->var << "\n";
         } else {
             assert(!"Not processed ssa form");
         }

@@ -1,8 +1,8 @@
 project(Std ASM_NASM)
 
-set(SOURCE_FILES std.asm)  # etc for all source files
+set(SOURCE_FILES std.asm)
 set_source_files_properties(${SOURCE_FILES} PROPERTIES
     LANGUAGE ASM_NASM 
-    COMPILE_FLAGS "-f elf64"
+    COMPILE_FLAGS "-f elf64 -g"
 )
-add_library(std STATIC ${SOURCE_FILES})
+add_library(std OBJECT ${SOURCE_FILES})

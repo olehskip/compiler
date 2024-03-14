@@ -46,11 +46,11 @@ SsaSeq generateSsaSeq(AstProgram::SharedPtr astProgram)
             }
             return std::nullopt;
         } else if (auto astProcedure = std::dynamic_pointer_cast<AstProcedureCall>(astNode)) {
-            const unsigned int childrenSize = astProcedure->children.size();
-            for (auto child : astProcedure->children) {
-                auto childMaybeVarIdx = _generateSsaEq(child);
-                assert(childMaybeVarIdx);
-                ret.forms.push_back(std::make_shared<SsaParam>(*childMaybeVarIdx));
+            const size_t childrenSize = astProcedure->children.size();
+            for (size_t childIdx = 0; childIdx < childrenSize; ++childIdx) {
+                auto childMaybeFormIdx = _generateSsaEq(astProcedure->children[childIdx]);
+                assert(childMaybeFormIdx);
+                ret.forms.push_back(std::make_shared<SsaParam>(*childMaybeFormIdx, childIdx));
             }
             ret.forms.push_back(std::make_shared<SsaCall>(astProcedure->name, childrenSize));
             return ret.forms.size() - 1;

@@ -70,7 +70,8 @@ int main(int argc, char *argv[])
     const std::string inputPath = argv[1], outputPath = argv[2];
     std::cout << "Input file path = " << inputPath << "\n";
     std::cout << "Output folder path = " << outputPath << "\n";
-    std::filesystem::create_directories(outputPath);
+    const bool outputDirectoryWasCreated = std::filesystem::create_directories(outputPath);
+    assert(outputDirectoryWasCreated);
 
     std::shared_ptr<ThompsonConstructor> thompsonConstructor =
         std::make_shared<ThompsonConstructor>();

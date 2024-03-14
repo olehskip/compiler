@@ -72,20 +72,24 @@ public:
 class SsaParam : public SsaForm
 {
 public:
-    SsaParam(FormIdx var_) : SsaForm(SsaFormType::PARAM), var(var_) {}
+    SsaParam(FormIdx var_, unsigned long long paramIdx_)
+        : SsaForm(SsaFormType::PARAM), var(var_), paramIdx(paramIdx_)
+    {
+    }
     FormIdx var;
+    unsigned long long paramIdx;
 };
 
 class SsaCall : public SsaForm
 {
 public:
-    SsaCall(std::string procedureName_, unsigned int paramsCnt_)
+    SsaCall(std::string procedureName_, unsigned long long paramsCnt_)
         : SsaForm(SsaFormType::CALL), procedureName(procedureName_), paramsCnt(paramsCnt_)
     {
     }
     FormIdx outputVar;
     std::string procedureName;
-    unsigned int paramsCnt;
+    unsigned long long paramsCnt;
 };
 
 class SsaSeq

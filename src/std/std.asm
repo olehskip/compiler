@@ -9,18 +9,19 @@ global display_int
 global plus_int
 
 plus_int:
-    mov rax, [rsp + 8]
-    add rax, [rsp + 16]
+    mov rax, rdi
+    add rax, rsi
     ret
     
-
 display_int:
+    push rbp
     mov rbp, rsp
+
     push r8
     push r9
     push r10
 
-    mov r8, [rbp + 8]
+    mov r8, rdi
     lea r9, [display_buffer + DISPLAY_BUFFER_LEN]
     mov r10, 10
 
@@ -41,7 +42,7 @@ display_int:
     cmp r8, 0
     jne .loop
 
-    cmp QWORD [rsp + 8], 0
+    cmp rdi, 0
     jge .write
     dec r9
     mov byte [r9], '-'
@@ -55,11 +56,12 @@ display_int:
     mov rdx, r9
     syscall
 
-    pop r8
-    pop r9
     pop r10
+    pop r9
+    pop r8
 
     mov rax, 0
-    mov rsp, rbp
-    ret
 
+    mov rsp, rbp
+    pop rbp
+    ret

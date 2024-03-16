@@ -85,8 +85,9 @@ int main(int argc, char *argv[])
                                  TerminalSymbol::STRING);
     thompsonConstructor->addRule("'" + LexicalAnalyzerConstructor::allLettersAndDigits + "+",
                                  TerminalSymbol::SYMBOL);
+    thompsonConstructor->addRule("define", TerminalSymbol::DEFINE);
     thompsonConstructor->addRule(LexicalAnalyzerConstructor::allLetters + "+" +
-                                     LexicalAnalyzerConstructor::allLettersAndDigits,
+                                     LexicalAnalyzerConstructor::allLettersAndDigits + "*",
                                  TerminalSymbol::ID);
     thompsonConstructor->addRule("\\+", TerminalSymbol::ID);
     thompsonConstructor->addRule(ThompsonConstructor::allDigits, TerminalSymbol::NUMBER);
@@ -97,13 +98,20 @@ int main(int argc, char *argv[])
     LexicalAnalyzer lexicalAnalyzer(thompsonConstructor);
 
     SyntaxAnalyzer syntaxAnalyzer(NonTerminalSymbol::PROGRAM, TerminalSymbol::FINISH);
-    syntaxAnalyzer.addRule(NonTerminalSymbol::PROGRAM, {NonTerminalSymbol::EXPRS});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::PROGRAM, {NonTerminalSymbol::STARTS});
+    syntaxAnalyzer.addRules(
+        NonTerminalSymbol::STARTS,
+        {{NonTerminalSymbol::STARTS, NonTerminalSymbol::START}, {NonTerminalSymbol::START}});
+    syntaxAnalyzer.addRules(NonTerminalSymbol::START,
+                            {{NonTerminalSymbol::PROCEDURE_DEFINITION}, {NonTerminalSymbol::EXPR}});
+
     syntaxAnalyzer.addRules(
         NonTerminalSymbol::EXPRS,
         {{NonTerminalSymbol::EXPRS, NonTerminalSymbol::EXPR}, {NonTerminalSymbol::EXPR}});
     syntaxAnalyzer.addRules(
         NonTerminalSymbol::EXPR,
         {{TerminalSymbol::ID}, {NonTerminalSymbol::LITERAL}, {NonTerminalSymbol::PROCEDURE_CALL}});
+
     syntaxAnalyzer.addRule(NonTerminalSymbol::PROCEDURE_CALL,
                            {TerminalSymbol::OPEN_BRACKET, NonTerminalSymbol::OPERATOR,
                             NonTerminalSymbol::OPERANDS, TerminalSymbol::CLOSED_BRACKET});
@@ -112,6 +120,18 @@ int main(int argc, char *argv[])
         NonTerminalSymbol::OPERANDS,
         {{NonTerminalSymbol::OPERANDS, NonTerminalSymbol::OPERAND}, {NonTerminalSymbol::OPERAND}});
     syntaxAnalyzer.addRule(NonTerminalSymbol::OPERAND, {NonTerminalSymbol::EXPR});
+
+    syntaxAnalyzer.addRule(NonTerminalSymbol::PROCEDURE_DEFINITION,
+                           {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::DEFINE,
+                            TerminalSymbol::OPEN_BRACKET, TerminalSymbol::ID,
+                            NonTerminalSymbol::PROCEDURE_PARAMS, TerminalSymbol::CLOSED_BRACKET,
+                            NonTerminalSymbol::EXPR, TerminalSymbol::CLOSED_BRACKET});
+    syntaxAnalyzer.addRules(
+        NonTerminalSymbol::PROCEDURE_PARAMS,
+        {{NonTerminalSymbol::PROCEDURE_PARAMS, NonTerminalSymbol::PROCEDURE_PARAM},
+         {NonTerminalSymbol::PROCEDURE_PARAM}});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::PROCEDURE_PARAM, {TerminalSymbol::ID});
+
     syntaxAnalyzer.addRules(NonTerminalSymbol::BOOLEAN,
                             {{TerminalSymbol::TRUE_LIT}, {TerminalSymbol::FALSE_LIT}});
     syntaxAnalyzer.addRules(NonTerminalSymbol::LITERAL, {{TerminalSymbol::NUMBER},

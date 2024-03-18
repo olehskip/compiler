@@ -45,14 +45,19 @@ SsaSeq generateSsaSeq(AstProgram::SharedPtr astProgram)
                 _generateSsaEq(child);
             }
             return std::nullopt;
-        } else if (auto astProcedure = std::dynamic_pointer_cast<AstProcedureCall>(astNode)) {
-            const size_t childrenSize = astProcedure->children.size();
+        } else if (auto astProcedureDef =
+                       std::dynamic_pointer_cast<AstProcedureDefinition>(astNode)) {
+
+            //
+
+        } else if (auto astProcedureCall = std::dynamic_pointer_cast<AstProcedureCall>(astNode)) {
+            const size_t childrenSize = astProcedureCall->children.size();
             for (size_t childIdx = 0; childIdx < childrenSize; ++childIdx) {
-                auto childMaybeFormIdx = _generateSsaEq(astProcedure->children[childIdx]);
+                auto childMaybeFormIdx = _generateSsaEq(astProcedureCall->children[childIdx]);
                 assert(childMaybeFormIdx);
                 ret.forms.push_back(std::make_shared<SsaParam>(*childMaybeFormIdx, childIdx));
             }
-            ret.forms.push_back(std::make_shared<SsaCall>(astProcedure->name, childrenSize));
+            ret.forms.push_back(std::make_shared<SsaCall>(astProcedureCall->name, childrenSize));
             return ret.forms.size() - 1;
         } else if (auto astId = std::dynamic_pointer_cast<AstId>(astNode)) {
             // ret.forms.push_back(SsaCall{astProcedure->name, childrenSize});
@@ -64,6 +69,7 @@ SsaSeq generateSsaSeq(AstProgram::SharedPtr astProgram)
             return ret.forms.size() - 1;
         }
         assert(!"Not processed ast node");
+
         return std::nullopt;
     };
 

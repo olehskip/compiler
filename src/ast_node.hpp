@@ -1,3 +1,5 @@
+#ifndef AST_NODE_HPP
+#define AST_NODE_HPP
 
 #include <memory>
 #include <string>
@@ -39,7 +41,7 @@ public:
 class AstId : public AstNode
 {
 public:
-    AstId() : AstNode(AstNodeType::ID) {}
+    AstId(std::string name_) : AstNode(AstNodeType::ID), name(name_) {}
 
     std::string name;
     using SharedPtr = std::shared_ptr<AstId>;

@@ -52,7 +52,6 @@ enum class NonTerminalSymbol
     LITERAL,
 
     PROCEDURE_CALL,
-    OPERATOR,
     OPERANDS,
     OPERAND,
 

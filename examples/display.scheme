@@ -1,1 +1,1 @@
-(define (sum a) (+ a b))
+(display 1)

@@ -78,14 +78,14 @@ void generateX64Asm(SsaSeq &ssaSeq, std::stringstream &stream)
             stream << "call " << asmProcedureName << "\n";
             stack.allocate(idx, 8);
             stream << "push rax\n";
-        } else if (auto ssaAssignLiteral = std::dynamic_pointer_cast<SsaAssignLiteral>(form)) {
+        } else if (auto ssaStoreLiteral = std::dynamic_pointer_cast<SsaStoreLiteral>(form)) {
         } else if (auto ssaParam = std::dynamic_pointer_cast<SsaParam>(form)) {
             const FormIdx varIdxToPush = ssaParam->var;
             assert(forms.size() > varIdxToPush);
             const auto paramForm = forms[varIdxToPush];
             assert(paramForm);
             auto registerName = getParamRegisterName(ssaParam->paramIdx);
-            if (auto literalParamForm = std::dynamic_pointer_cast<SsaAssignLiteral>(paramForm)) {
+            if (auto literalParamForm = std::dynamic_pointer_cast<SsaStoreLiteral>(paramForm)) {
                 stream << "mov " << registerName << ", " << literalParamForm->literal << "\n";
             } else {
                 auto allocation = stack.getAllocation(varIdxToPush);

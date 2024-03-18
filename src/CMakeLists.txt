@@ -17,6 +17,7 @@ set(SOURCES
     src/parser_utils.cpp
     src/inter_code_generator.cpp
     src/x64_nasm_generator.cpp
+    src/type_system.cpp
 )
 
 add_library(${COMPILER_LIB_OUTPUT} STATIC ${SOURCES})

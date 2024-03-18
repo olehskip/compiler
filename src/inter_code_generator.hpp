@@ -4,14 +4,20 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 #include "ast_node.hpp"
+#include "type_system.hpp"
 
 class Procedure;
 
 using FormIdx = uint64_t;
 using VarContent = int64_t;
+
+using VarLabel = uint64_t;
+
+using VarLabelOrValue = std::variant<VarLabel, uint64_t>;
 
 class SymbolTable
 {
@@ -23,6 +29,8 @@ public:
     std::unordered_map<std::string, Procedure> proceduresTable;
     // std::unordered_map<VarIdx, VarContent> variablesTable;
     std::vector<VarContent> variablesTable;
+
+    const SharedPtr prevSymbolTable;
 };
 
 enum class SsaOp
@@ -32,6 +40,9 @@ enum class SsaOp
 
 enum class SsaFormType
 {
+    ALLOCA,
+    STORE,
+    LOAD,
     ASSIGN_LITERAL,
     OPERATION,
     CALL,
@@ -48,10 +59,33 @@ protected:
     SsaForm(SsaFormType formType_) : formType(formType_) {}
 };
 
-class SsaAssignLiteral : public SsaForm
+class SsaAlloca : public SsaForm
 {
 public:
-    SsaAssignLiteral(VarContent literal_) : SsaForm(SsaFormType::ASSIGN_LITERAL), literal(literal_)
+    SsaAlloca(VarLabel varLabel_, uint64_t size_, uint64_t = 0)
+        : SsaForm(SsaFormType::ALLOCA), varLabel(varLabel_), size(size_), alignment(0)
+    {
+    }
+
+    const VarLabel varLabel;
+    const uint64_t size;
+    const uint64_t alignment;
+};
+
+// class SsaStore : public SsaForm
+// {
+// public:
+//     SsaAlloca(VarLabel varLabel_, uint64_t size_, uint64_t = 0)
+//         : SsaForm(SsaFormType::STORE), varLabel(varLabel_), size(size_), alignment(0)
+//     {
+//     }
+//     const VarLabel varLabel;
+// };
+
+class SsaStoreLiteral : public SsaForm
+{
+public:
+    SsaStoreLiteral(VarContent literal_) : SsaForm(SsaFormType::ASSIGN_LITERAL), literal(literal_)
     {
     }
     const VarContent literal;
@@ -87,7 +121,6 @@ public:
         : SsaForm(SsaFormType::CALL), procedureName(procedureName_), paramsCnt(paramsCnt_)
     {
     }
-    FormIdx outputVar;
     std::string procedureName;
     unsigned long long paramsCnt;
 };
@@ -104,10 +137,8 @@ class Procedure
 {
 public:
     std::string name;
-    FormIdx outputVar;
-    unsigned int paramsCnt;
-    SymbolTable::SharedPtr symbolTable;
     SsaSeq ssaSeq;
+    Type returnType;
 };
 
 SsaSeq generateSsaSeq(AstProgram::SharedPtr astProgram);

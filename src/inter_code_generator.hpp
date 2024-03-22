@@ -17,7 +17,26 @@ using VarContent = int64_t;
 
 using VarLabel = uint64_t;
 
-using VarLabelOrValue = std::variant<VarLabel, uint64_t>;
+class Type
+{
+public:
+    enum class TypeID
+    {
+        UINT64,
+        VOID
+    };
+    Type(TypeID typeID_) : typeID(typeID_) {}
+    const TypeID typeID;
+};
+
+class Value
+{
+public:
+    Value(Type ty_) : ty(ty_) {}
+
+    const Type ty;
+    using SharedPtr = std::shared_ptr<Value>;
+};
 
 class SymbolTable
 {
@@ -38,32 +57,31 @@ enum class SsaOp
     PLUS
 };
 
-enum class SsaFormType
-{
-    ALLOCA,
-    STORE,
-    LOAD,
-    ASSIGN_LITERAL,
-    OPERATION,
-    CALL,
-    PARAM,
-};
-
-class SsaForm
+class Instruction
 {
 public:
-    const SsaFormType formType;
-    virtual ~SsaForm() {}
+    enum class InstType
+    {
+        ALLOCA,
+        STORE,
+        LOAD,
+        // ASSIGN_LITERAL,
+        // OPERATION,
+        CALL,
+        PARAM,
+    };
+    const InstType instType;
+    virtual ~Instruction() {}
 
 protected:
-    SsaForm(SsaFormType formType_) : formType(formType_) {}
+    Instruction(InstType instType_) : instType(instType_) {}
 };
 
-class SsaAlloca : public SsaForm
+class AllocaInst : public Instruction
 {
 public:
-    SsaAlloca(VarLabel varLabel_, uint64_t size_, uint64_t = 0)
-        : SsaForm(SsaFormType::ALLOCA), varLabel(varLabel_), size(size_), alignment(0)
+    AllocaInst(VarLabel varLabel_, uint64_t size_, uint64_t = 0)
+        : Instruction(InstType::ALLOCA), varLabel(varLabel_), size(size_), alignment(0)
     {
     }
 
@@ -72,53 +90,58 @@ public:
     const uint64_t alignment;
 };
 
-// class SsaStore : public SsaForm
+class StoreInst : public Instruction
+{
+public:
+    StoreInst(Value::SharedPtr dst_, Value::SharedPtr src_)
+        : Instruction(InstType::STORE), dst(dst_), src(src_)
+    {
+    }
+
+private:
+    Value::SharedPtr dst, src;
+};
+
+class LoadInst : public Instruction
+{
+public:
+    LoadInst(Value::SharedPtr src_) : Instruction(InstType::LOAD), src(src_) {}
+
+private:
+    Value::SharedPtr src;
+};
+
+// class SsaOperation : public Instruction
 // {
 // public:
-//     SsaAlloca(VarLabel varLabel_, uint64_t size_, uint64_t = 0)
-//         : SsaForm(SsaFormType::STORE), varLabel(varLabel_), size(size_), alignment(0)
+//     SsaOperation(FormIdx firstVar_, SsaOp op_, FormIdx secondVar_)
+//         : Instruction(SsaFormType::OPERATION), firstVar(firstVar_), op(op_),
+//         secondVar(secondVar_)
 //     {
 //     }
-//     const VarLabel varLabel;
+//     FormIdx firstVar;
+//     SsaOp op;
+//     FormIdx secondVar;
 // };
 
-class SsaStoreLiteral : public SsaForm
+class ParamInst : public Instruction
 {
 public:
-    SsaStoreLiteral(VarContent literal_) : SsaForm(SsaFormType::ASSIGN_LITERAL), literal(literal_)
+    ParamInst(Value::SharedPtr value_, unsigned long long paramIdx_)
+        : Instruction(InstType::PARAM), paramIdx(paramIdx_), value(value_)
     {
     }
-    const VarContent literal;
+
+private:
+    const unsigned long long paramIdx;
+    Value::SharedPtr value;
 };
 
-class SsaOperation : public SsaForm
+class CallInst : public Instruction
 {
 public:
-    SsaOperation(FormIdx firstVar_, SsaOp op_, FormIdx secondVar_)
-        : SsaForm(SsaFormType::OPERATION), firstVar(firstVar_), op(op_), secondVar(secondVar_)
-    {
-    }
-    FormIdx firstVar;
-    SsaOp op;
-    FormIdx secondVar;
-};
-
-class SsaParam : public SsaForm
-{
-public:
-    SsaParam(FormIdx var_, unsigned long long paramIdx_)
-        : SsaForm(SsaFormType::PARAM), var(var_), paramIdx(paramIdx_)
-    {
-    }
-    FormIdx var;
-    unsigned long long paramIdx;
-};
-
-class SsaCall : public SsaForm
-{
-public:
-    SsaCall(std::string procedureName_, unsigned long long paramsCnt_)
-        : SsaForm(SsaFormType::CALL), procedureName(procedureName_), paramsCnt(paramsCnt_)
+    CallInst(std::string procedureName_, unsigned long long paramsCnt_)
+        : Instruction(InstType::CALL), procedureName(procedureName_), paramsCnt(paramsCnt_)
     {
     }
     std::string procedureName;
@@ -129,7 +152,7 @@ class SsaSeq
 {
 public:
     SymbolTable::SharedPtr symbolTable;
-    std::vector<std::shared_ptr<SsaForm>> forms;
+    std::vector<std::shared_ptr<Instruction>> forms;
     void pretty(std::stringstream &stream);
 };
 

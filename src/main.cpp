@@ -1,4 +1,3 @@
-#include "inter_code_generator.hpp"
 #include "lexical_analyzer/thompson_constructor.hpp"
 #include "parser_utils.hpp"
 #include "symbols.hpp"

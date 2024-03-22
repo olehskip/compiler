@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "inter_code_generator.hpp"
+#include "IR/code_generator.hpp"
 
 void generateX64Asm(SsaSeq &ssaSeq, std::stringstream &stream);
 

@@ -1,4 +1,3 @@
-#include "inter_code_generator.hpp"
 #include "lexical_analyzer/thompson_constructor.hpp"
 #include "parser_utils.hpp"
 #include "symbols.hpp"
@@ -24,12 +23,22 @@ static void prettyAst(AstNode::SharedPtr astNode, std::stringstream &stream)
             stream << "\t" << '"' << "[PROGRAM] " << id << '"' << " -> ";
             prettyAst(child, stream);
         }
-        stream << "}\n";
-    } else if (auto astProcedure = std::dynamic_pointer_cast<AstProcedureCall>(astNode)) {
-        stream << '"' << "[PROCEDURE] " << id << " " << astProcedure->name << '"' << "\n";
-        for (auto child : astProcedure->children) {
-            stream << "\t" << '"' << "[PROCEDURE] " << id << " " << astProcedure->name << '"'
+        stream << "\n}\n";
+    } else if (auto astProcedureDef = std::dynamic_pointer_cast<AstProcedureDefinition>(astNode)) {
+        stream << '"' << "[PROCEDURE DEF] " << id << " " << astProcedureDef->name << '"' << "\n";
+        for (auto child : astProcedureDef->params) {
+            stream << "\t" << '"' << "[PROCEDURE DEF] " << id << " " << astProcedureDef->name << '"'
                    << " -> ";
+            prettyAst(child, stream);
+        }
+        stream << "\t" << '"' << "[PROCEDURE DEF] " << id << " " << astProcedureDef->name << '"'
+               << " -> ";
+        prettyAst(astProcedureDef->body, stream);
+    } else if (auto astProcedureCall = std::dynamic_pointer_cast<AstProcedureCall>(astNode)) {
+        stream << '"' << "[PROCEDURE CALL] " << id << " " << astProcedureCall->name << '"' << "\n";
+        for (auto child : astProcedureCall->children) {
+            stream << "\t" << '"' << "[PROCEDURE CALL] " << id << " " << astProcedureCall->name
+                   << '"' << " -> ";
             prettyAst(child, stream);
         }
     } else if (auto astId = std::dynamic_pointer_cast<AstId>(astNode)) {
@@ -85,8 +94,9 @@ int main(int argc, char *argv[])
                                  TerminalSymbol::STRING);
     thompsonConstructor->addRule("'" + LexicalAnalyzerConstructor::allLettersAndDigits + "+",
                                  TerminalSymbol::SYMBOL);
+    thompsonConstructor->addRule("define", TerminalSymbol::DEFINE);
     thompsonConstructor->addRule(LexicalAnalyzerConstructor::allLetters + "+" +
-                                     LexicalAnalyzerConstructor::allLettersAndDigits,
+                                     LexicalAnalyzerConstructor::allLettersAndDigits + "*",
                                  TerminalSymbol::ID);
     thompsonConstructor->addRule("\\+", TerminalSymbol::ID);
     thompsonConstructor->addRule(ThompsonConstructor::allDigits, TerminalSymbol::NUMBER);
@@ -97,21 +107,39 @@ int main(int argc, char *argv[])
     LexicalAnalyzer lexicalAnalyzer(thompsonConstructor);
 
     SyntaxAnalyzer syntaxAnalyzer(NonTerminalSymbol::PROGRAM, TerminalSymbol::FINISH);
-    syntaxAnalyzer.addRule(NonTerminalSymbol::PROGRAM, {NonTerminalSymbol::EXPRS});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::PROGRAM, {NonTerminalSymbol::STARTS});
+    syntaxAnalyzer.addRules(
+        NonTerminalSymbol::STARTS,
+        {{NonTerminalSymbol::STARTS, NonTerminalSymbol::START}, {NonTerminalSymbol::START}});
+    syntaxAnalyzer.addRules(NonTerminalSymbol::START,
+                            {{NonTerminalSymbol::PROCEDURE_DEFINITION}, {NonTerminalSymbol::EXPR}});
+
     syntaxAnalyzer.addRules(
         NonTerminalSymbol::EXPRS,
         {{NonTerminalSymbol::EXPRS, NonTerminalSymbol::EXPR}, {NonTerminalSymbol::EXPR}});
     syntaxAnalyzer.addRules(
         NonTerminalSymbol::EXPR,
         {{TerminalSymbol::ID}, {NonTerminalSymbol::LITERAL}, {NonTerminalSymbol::PROCEDURE_CALL}});
+
     syntaxAnalyzer.addRule(NonTerminalSymbol::PROCEDURE_CALL,
-                           {TerminalSymbol::OPEN_BRACKET, NonTerminalSymbol::OPERATOR,
+                           {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::ID,
                             NonTerminalSymbol::OPERANDS, TerminalSymbol::CLOSED_BRACKET});
-    syntaxAnalyzer.addRule(NonTerminalSymbol::OPERATOR, {TerminalSymbol::ID});
     syntaxAnalyzer.addRules(
         NonTerminalSymbol::OPERANDS,
         {{NonTerminalSymbol::OPERANDS, NonTerminalSymbol::OPERAND}, {NonTerminalSymbol::OPERAND}});
     syntaxAnalyzer.addRule(NonTerminalSymbol::OPERAND, {NonTerminalSymbol::EXPR});
+
+    syntaxAnalyzer.addRule(NonTerminalSymbol::PROCEDURE_DEFINITION,
+                           {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::DEFINE,
+                            TerminalSymbol::OPEN_BRACKET, TerminalSymbol::ID,
+                            NonTerminalSymbol::PROCEDURE_PARAMS, TerminalSymbol::CLOSED_BRACKET,
+                            NonTerminalSymbol::EXPR, TerminalSymbol::CLOSED_BRACKET});
+    syntaxAnalyzer.addRules(
+        NonTerminalSymbol::PROCEDURE_PARAMS,
+        {{NonTerminalSymbol::PROCEDURE_PARAMS, NonTerminalSymbol::PROCEDURE_PARAM},
+         {NonTerminalSymbol::PROCEDURE_PARAM}});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::PROCEDURE_PARAM, {TerminalSymbol::ID});
+
     syntaxAnalyzer.addRules(NonTerminalSymbol::BOOLEAN,
                             {{TerminalSymbol::TRUE_LIT}, {TerminalSymbol::FALSE_LIT}});
     syntaxAnalyzer.addRules(NonTerminalSymbol::LITERAL, {{TerminalSymbol::NUMBER},
@@ -134,10 +162,12 @@ int main(int argc, char *argv[])
     assert(syntaxRet);
     std::cout << "Code was successfully parsed by syntax analyzer\n";
     std::cout << "Code was successfully fully parsed\n";
+    saveSt(syntaxRet, outputPath + "/st.txt");
+    std::cout << "ST was saved\n";
 
     auto ast = convertToAst(syntaxRet);
     saveAst(ast, outputPath + "/ast.txt");
-    std::cout << "Ast was saved\n";
+    std::cout << "AST was saved\n";
 
     auto ssaSeq = generateSsaSeq(ast);
     saveSeq(ssaSeq, outputPath + "/ssa.txt");

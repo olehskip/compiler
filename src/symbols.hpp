@@ -23,6 +23,7 @@ enum class TerminalSymbol
     OPEN_BRACKET,
     CLOSED_BRACKET,
     ID,
+    DEFINE,
 
     FINISH,
 
@@ -37,8 +38,9 @@ enum class TerminalSymbol
 enum class NonTerminalSymbol
 {
     PROGRAM,
-    STMT,
-    STMTS,
+    STARTS,
+    START,
+
     EXPRS,
     EXPR,
     EPS, // TODO: remove it
@@ -50,9 +52,12 @@ enum class NonTerminalSymbol
     LITERAL,
 
     PROCEDURE_CALL,
-    OPERATOR,
     OPERANDS,
     OPERAND,
+
+    PROCEDURE_DEFINITION,
+    PROCEDURE_PARAMS,
+    PROCEDURE_PARAM,
 
     DEFINITION,
 

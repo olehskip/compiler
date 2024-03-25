@@ -516,6 +516,7 @@ protected:
         lexConstructor->addRule(";.*\n", TerminalSymbol::COMMENT);
         lexConstructor->addRule("#\\\\" + LexicalAnalyzerConstructor::allLetters + "+",
                                 TerminalSymbol::CHARACTER);
+        lexConstructor->addRule("define", TerminalSymbol::DEFINE);
     }
     std::shared_ptr<LexicalAnalyzerConstructor> lexConstructor;
 };
@@ -564,6 +565,16 @@ TEST_F(RealTokens, Comment)
     EXPECT_EQ(parseRes[1]->symbolType, TerminalSymbol::NEWLINE);
     EXPECT_EQ(parseRes[2]->symbolType, TerminalSymbol::COMMENT);
     EXPECT_EQ(parseRes[3]->symbolType, TerminalSymbol::NUMBER);
+}
+
+TEST_F(RealTokens, MatchKeyword)
+{
+    const std::string toParse = "1 define";
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
+    ASSERT_EQ(parseRes.size(), 3);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::NUMBER);
+    EXPECT_EQ(parseRes[1]->symbolType, TerminalSymbol::BLANK);
+    EXPECT_EQ(parseRes[2]->symbolType, TerminalSymbol::DEFINE);
 }
 
 int main(int argc, char **argv)

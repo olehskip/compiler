@@ -108,4 +108,6 @@ private:
     const Symbol EPS = Symbol(NonTerminalSymbol::EPS);
 };
 
+void saveSt(NonTerminalSymbolSt::SharedPtr programSt, std::string filepath);
+
 #endif // SYNTAX_ANALYZER_HPP

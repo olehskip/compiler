@@ -1,21 +1,65 @@
 #include "parser_utils.hpp"
 
 #include <cassert>
+#include <iostream>
 #include <stack>
 
 static std::vector<AstNode::SharedPtr> processGeneral(SymbolSt::SharedPtr node);
 
 static std::string processProcedureName(SymbolSt::SharedPtr node)
 {
-    auto operatorNonTerminalSt = std::dynamic_pointer_cast<NonTerminalSymbolSt>(node);
-    assert(operatorNonTerminalSt);
-    assert(operatorNonTerminalSt->symbolType == NonTerminalSymbol::OPERATOR);
-    assert(operatorNonTerminalSt->children.size() == 1);
-    auto terminalSt =
-        std::dynamic_pointer_cast<TerminalSymbolSt>(operatorNonTerminalSt->children[0]);
+    auto terminalSt = std::dynamic_pointer_cast<TerminalSymbolSt>(node);
     assert(terminalSt);
     assert(terminalSt->symbolType == TerminalSymbol::ID);
     return terminalSt->text;
+}
+
+static std::vector<AstId::SharedPtr> processProcedureParams(SymbolSt::SharedPtr node)
+{
+    if (auto nonTerminalSt = std::dynamic_pointer_cast<NonTerminalSymbolSt>(node)) {
+        if (nonTerminalSt->symbolType == NonTerminalSymbol::PROCEDURE_PARAMS) {
+            assert(nonTerminalSt->children.size() == 2 || nonTerminalSt->children.size() == 1);
+            std::vector<AstId::SharedPtr> processedParams;
+            for (auto child : nonTerminalSt->children) {
+                auto processedChild = processProcedureParams(child);
+                assert(processedChild.size() > 0);
+                processedParams.insert(processedParams.end(), processedChild.begin(),
+                                       processedChild.end());
+            }
+            return processedParams;
+        } else if (nonTerminalSt->symbolType == NonTerminalSymbol::PROCEDURE_PARAM) {
+            auto processedParam = processProcedureParams(nonTerminalSt->children[0]);
+            assert(processedParam.size() == 1);
+            return processedParam;
+        } else {
+            assert(!"Unexpected symbolType");
+            return {};
+        }
+    } else if (auto terminalSt = std::dynamic_pointer_cast<TerminalSymbolSt>(node)) {
+        assert(terminalSt->symbolType == TerminalSymbol::ID);
+        return {std::make_shared<AstId>(terminalSt->text)};
+
+    } else {
+        assert(!"Should never happen");
+        return {};
+    }
+}
+
+static AstProcedureDefinition::SharedPtr
+processProcedureDefinition(NonTerminalSymbolSt::SharedPtr node)
+{
+    auto ret = std::make_shared<AstProcedureDefinition>();
+    assert(node->children.size() >= 6); // ( define (PROCEDURE_NAME ARG*) body )
+    ret->name = processProcedureName(node->children[3]);
+    // TODO: add support for no params
+    if (node->children.size() > 6) {
+        ret->params = processProcedureParams(node->children[4]);
+        assert(ret->params.size() > 0);
+    }
+    auto processedBody = processGeneral(node->children[6]);
+    assert(processedBody.size() == 1);
+    ret->body = processedBody.front();
+    return ret;
 }
 
 static std::vector<AstNode::SharedPtr> processOperands(SymbolSt::SharedPtr node)
@@ -27,9 +71,10 @@ static std::vector<AstNode::SharedPtr> processOperands(SymbolSt::SharedPtr node)
         std::vector<AstNode::SharedPtr> processedOperands;
         for (auto child : nonTerminalSt->children) {
             auto processedChild = processOperands(child);
-            processedOperands.insert(processedOperands.begin(), processedChild.begin(),
+            processedOperands.insert(processedOperands.end(), processedChild.begin(),
                                      processedChild.end());
         }
+        assert(processedOperands.size() > 0);
         return processedOperands;
     } else if (nonTerminalSt->symbolType == NonTerminalSymbol::OPERAND) {
         auto processedOperand = processGeneral(nonTerminalSt->children[0]);
@@ -44,14 +89,11 @@ static std::vector<AstNode::SharedPtr> processOperands(SymbolSt::SharedPtr node)
 static AstProcedureCall::SharedPtr processProcedureCall(NonTerminalSymbolSt::SharedPtr node)
 {
     auto ret = std::make_shared<AstProcedureCall>();
-    assert(node->children.size() > 3); // ( PROCEDURE_NAME OPERATOR* ]
+    assert(node->children.size() >= 3); // ( PROCEDURE_NAME OPERATOR* )
     ret->name = processProcedureName(node->children[1]);
     if (node->children.size() > 3) {
         ret->children = processOperands(node->children[2]);
         assert(ret->children.size() > 0);
-        // for (auto child : ret->children) {
-        //     child->parent = ret;
-        // }
     }
 
     return ret;
@@ -73,9 +115,7 @@ static std::vector<AstNode::SharedPtr> processGeneral(SymbolSt::SharedPtr node)
 {
     if (auto terminalSt = std::dynamic_pointer_cast<TerminalSymbolSt>(node)) {
         if (terminalSt->symbolType == TerminalSymbol::ID) {
-            auto ret = std::make_shared<AstId>();
-            ret->name = terminalSt->text;
-            return {ret};
+            return {std::make_shared<AstId>(terminalSt->text)};
         } else if (terminalSt->symbolType == TerminalSymbol::NUMBER) {
             auto ret = std::make_shared<AstNum>();
             ret->num = std::stoi(terminalSt->text);
@@ -86,6 +126,8 @@ static std::vector<AstNode::SharedPtr> processGeneral(SymbolSt::SharedPtr node)
         }
     } else if (auto nonTerminalSt = std::dynamic_pointer_cast<NonTerminalSymbolSt>(node)) {
         switch (nonTerminalSt->symbolType) {
+            case NonTerminalSymbol::START:
+            case NonTerminalSymbol::STARTS:
             case NonTerminalSymbol::EXPR:
             case NonTerminalSymbol::EXPRS: {
                 std::vector<AstNode::SharedPtr> ret;
@@ -94,6 +136,12 @@ static std::vector<AstNode::SharedPtr> processGeneral(SymbolSt::SharedPtr node)
                     ret.insert(ret.end(), processedChildren.begin(), processedChildren.end());
                 }
                 return ret;
+            }
+            case NonTerminalSymbol::PROCEDURE_DEFINITION: {
+                auto ret =
+                    std::dynamic_pointer_cast<AstNode>(processProcedureDefinition(nonTerminalSt));
+                assert(ret);
+                return {ret};
             }
             case NonTerminalSymbol::PROCEDURE_CALL: {
                 auto ret = std::dynamic_pointer_cast<AstNode>(processProcedureCall(nonTerminalSt));
@@ -105,7 +153,9 @@ static std::vector<AstNode::SharedPtr> processGeneral(SymbolSt::SharedPtr node)
                 return {processGeneral(nonTerminalSt->children.back())};
             }
             default: {
-                assert(!"nonterminal not implemented");
+                std::cerr << "nonterminal " + getSymbolName(nonTerminalSt->symbolType) +
+                                 " not implemented";
+                abort();
             }
         }
     }

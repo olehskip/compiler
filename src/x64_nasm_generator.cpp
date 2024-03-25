@@ -7,36 +7,29 @@
 class Stack
 {
 public:
-    struct Allocation
+    StackRegister allocate(Value::SharedPtr value)
     {
-        using Offset = unsigned long long;
-        using Size = unsigned long long;
-        Offset offset;
-        Size size;
-    };
-
-    Allocation allocate(FormIdx formIdx, Allocation::Size size)
-    {
-        currentOffset += size;
-        const Allocation ret{currentOffset, size};
-        const bool wasInserted = formStackOffset.insert({formIdx, ret}).second;
+        currentOffset += 8;
+        const StackRegister ret(currentOffset);
+        const bool wasInserted = container.insert({value, ret}).second;
         assert(wasInserted);
         return ret;
     }
 
-    Allocation getAllocation(FormIdx formIdx)
+    StackRegister getStackRegister(Value::SharedPtr value)
     {
-        return formStackOffset.at(formIdx);
+        assert(container.contains(value));
+        return container.at(value);
     }
 
-    Allocation::Offset getTotalSize() const
+    uint64_t getTotalSize() const
     {
         return currentOffset;
     }
 
 private:
-    std::unordered_map<FormIdx, Allocation> formStackOffset;
-    Allocation::Offset currentOffset = 0;
+    std::unordered_map<Value::SharedPtr, StackRegister> container;
+    uint64_t currentOffset = 0;
 };
 
 static std::string getParamRegisterName(unsigned long long paramIdx)
@@ -54,9 +47,6 @@ static std::string getParamRegisterName(unsigned long long paramIdx)
 void generateX64Asm(SsaSeq &ssaSeq, std::stringstream &stream)
 {
     Stack stack;
-    // std::unordered_map<
-    // Heap heap;
-    // std::unordered_map<FormIdx, Heap::Allocation> allocations;
 
     stream << "extern display_int\n";
     stream << "extern plus_int\n";
@@ -64,32 +54,32 @@ void generateX64Asm(SsaSeq &ssaSeq, std::stringstream &stream)
     stream << "global _start\n";
     stream << "_start:\n";
     stream << "mov rbp, rsp\n";
-    auto forms = ssaSeq.forms;
-    for (size_t idx = 0; idx < forms.size(); ++idx) {
-        auto form = forms[idx];
-        if (auto ssaCall = std::dynamic_pointer_cast<SsaCall>(form)) {
+    for (auto inst : ssaSeq.insts) {
+        if (auto callInst = std::dynamic_pointer_cast<CallInst>(inst)) {
+            auto procedure = ssaSeq.symbolTable->proceduresTable[callInst->procedureName];
+            assert(procedure);
             std::string asmProcedureName;
-            if (ssaCall->procedureName == "+") {
+            if (callInst->procedureName == "+") {
                 asmProcedureName = "plus_int";
-            } else if (ssaCall->procedureName == "display") {
+            } else if (callInst->procedureName == "display") {
                 asmProcedureName = "display_int";
             }
             assert(asmProcedureName.size());
+            for (size_t argIdx = 0; argIdx < callInst->args.size(); ++argIdx) {
+                auto arg = callInst->args[argIdx];
+                if (auto constIntArg = std::dynamic_pointer_cast<ConstantInt>(arg)) {
+                    stream << "mov " << getParamRegisterName(argIdx) << ", " << constIntArg->val
+                           << "\n";
+                } else {
+                    auto registerVal = stack.getStackRegister(arg);
+                    stream << "mov " << getParamRegisterName(argIdx) << ", "
+                           << registerVal.getData() << "\n";
+                }
+            }
             stream << "call " << asmProcedureName << "\n";
-            stack.allocate(idx, 8);
-            stream << "push rax\n";
-        } else if (auto ssaAssignLiteral = std::dynamic_pointer_cast<SsaAssignLiteral>(form)) {
-        } else if (auto ssaParam = std::dynamic_pointer_cast<SsaParam>(form)) {
-            const FormIdx varIdxToPush = ssaParam->var;
-            assert(forms.size() > varIdxToPush);
-            const auto paramForm = forms[varIdxToPush];
-            assert(paramForm);
-            auto registerName = getParamRegisterName(ssaParam->paramIdx);
-            if (auto literalParamForm = std::dynamic_pointer_cast<SsaAssignLiteral>(paramForm)) {
-                stream << "mov " << registerName << ", " << literalParamForm->literal << "\n";
-            } else {
-                auto allocation = stack.getAllocation(varIdxToPush);
-                stream << "mov " << registerName << ", [rbp - " << allocation.offset << "]\n";
+            if (procedure->ty.typeID != Type::TypeID::VOID) {
+                stream << "push rax\n"; 
+                stack.allocate(callInst);
             }
         } else {
             assert(!"Not precessed ssa form type");

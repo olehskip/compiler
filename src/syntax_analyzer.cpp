@@ -1,8 +1,10 @@
 #include "syntax_analyzer.hpp"
 
 #include <cassert>
+#include <fstream>
 #include <iostream>
 #include <set>
+#include <sstream>
 #include <stack>
 
 Item::Item(Rule rule, size_t tPos, Symbol tLookaheadSymbol)
@@ -343,4 +345,38 @@ void SyntaxAnalyzer::fillStateTables(const State::SharedPtr state)
             fillStateTables(destState);
         }
     }
+}
+
+static void prettySt(SymbolSt::SharedPtr stNode, std::stringstream &stream)
+{
+    const auto id = std::to_string((unsigned long long)stNode.get());
+    if (auto nonTerminalSymbolSt = std::dynamic_pointer_cast<NonTerminalSymbolSt>(stNode)) {
+        const auto symbolName = getSymbolName(nonTerminalSymbolSt->symbolType);
+        if (nonTerminalSymbolSt->symbolType == NonTerminalSymbol::PROGRAM) {
+            stream << "digraph G {\n";
+        } else {
+            stream << '"' << symbolName << " " << id << '"' << "\n";
+        }
+        for (auto child : nonTerminalSymbolSt->children) {
+            stream << "\t" << '"' << symbolName << " " << id << '"' << " -> ";
+            prettySt(child, stream);
+        }
+        if (nonTerminalSymbolSt->symbolType == NonTerminalSymbol::PROGRAM) {
+            stream << "\n}\n";
+        }
+    } else if (auto terminalSymbolSt = std::dynamic_pointer_cast<TerminalSymbolSt>(stNode)) {
+        const auto symbolName = getSymbolName(terminalSymbolSt->symbolType);
+        stream << "\t" << '"' << symbolName << " " << id << '"';
+    } else {
+        assert(!"Should not happen");
+    }
+}
+
+void saveSt(NonTerminalSymbolSt::SharedPtr programSt, std::string filepath)
+{
+    std::stringstream stream;
+    prettySt(programSt, stream);
+    std::ofstream file(filepath);
+    file << stream.rdbuf();
+    file.close();
 }

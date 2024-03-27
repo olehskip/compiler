@@ -56,7 +56,11 @@ void generateX64Asm(SsaSeq &ssaSeq, std::stringstream &stream)
     stream << "mov rbp, rsp\n";
     for (auto inst : ssaSeq.insts) {
         if (auto callInst = std::dynamic_pointer_cast<CallInst>(inst)) {
-            auto procedure = ssaSeq.symbolTable->proceduresTable[callInst->procedureName];
+            std::vector<Type> argsTypes;
+            for (auto arg : callInst->args) {
+                argsTypes.push_back(arg->ty);
+            }
+            auto procedure = ssaSeq.symbolTable->getProcedure(callInst->procedureName, argsTypes);
             assert(procedure);
             std::string asmProcedureName;
             if (callInst->procedureName == "+") {
@@ -78,7 +82,7 @@ void generateX64Asm(SsaSeq &ssaSeq, std::stringstream &stream)
             }
             stream << "call " << asmProcedureName << "\n";
             if (procedure->ty.typeID != Type::TypeID::VOID) {
-                stream << "push rax\n"; 
+                stream << "push rax\n";
                 stack.allocate(callInst);
             }
         } else {

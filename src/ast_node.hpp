@@ -12,7 +12,8 @@ enum class AstNodeType
     PROCEDURE_DEFINITION,
     PROCEDURE_CALL,
     ID,
-    NUM,
+    INT,
+    FLOAT
 };
 
 class AstNode
@@ -47,13 +48,22 @@ public:
     using SharedPtr = std::shared_ptr<AstId>;
 };
 
-class AstNum : public AstNode
+class AstInt : public AstNode
 {
 public:
-    AstNum() : AstNode(AstNodeType::NUM) {}
+    AstInt() : AstNode(AstNodeType::INT) {}
 
-    int num;
-    using SharedPtr = std::shared_ptr<AstId>;
+    int64_t num;
+    using SharedPtr = std::shared_ptr<AstInt>;
+};
+
+class AstFloat : public AstNode
+{
+public:
+    AstFloat() : AstNode(AstNodeType::FLOAT) {}
+
+    long double num;
+    using SharedPtr = std::shared_ptr<AstFloat>;
 };
 
 class AstProcedureDefinition : public AstNode

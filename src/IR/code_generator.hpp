@@ -24,11 +24,15 @@ public:
 
     FormIdx putNewVar(VarContent varContent);
 
-    std::unordered_map<std::string, Procedure::SharedPtr> proceduresTable;
     void addNewProcedure(Procedure::SharedPtr procedure);
+    Procedure::SharedPtr getProcedure(std::string name, std::vector<Type> argsTypes);
     std::vector<VarContent> variablesTable;
 
     const SharedPtr prevSymbolTable;
+
+private:
+    std::unordered_map<std::string, std::vector<Procedure::SharedPtr>>
+        proceduresTable; // same procedure may have different types
 };
 
 enum class SsaOp

@@ -116,8 +116,8 @@ static std::vector<AstNode::SharedPtr> processGeneral(SymbolSt::SharedPtr node)
     if (auto terminalSt = std::dynamic_pointer_cast<TerminalSymbolSt>(node)) {
         if (terminalSt->symbolType == TerminalSymbol::ID) {
             return {std::make_shared<AstId>(terminalSt->text)};
-        } else if (terminalSt->symbolType == TerminalSymbol::NUMBER) {
-            auto ret = std::make_shared<AstNum>();
+        } else if (terminalSt->symbolType == TerminalSymbol::INT) {
+            auto ret = std::make_shared<AstInt>();
             ret->num = std::stoi(terminalSt->text);
             return {ret};
         } else {

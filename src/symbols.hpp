@@ -32,7 +32,7 @@ enum class TerminalSymbol
     CHARACTER,
     STRING,
     SYMBOL,
-    NUMBER,
+    INT,
 };
 
 enum class NonTerminalSymbol

@@ -43,8 +43,10 @@ static void prettyAst(AstNode::SharedPtr astNode, std::stringstream &stream)
         }
     } else if (auto astId = std::dynamic_pointer_cast<AstId>(astNode)) {
         stream << '"' << "[ID] " << id << " " << astId->name << '"' << "\n";
-    } else if (auto astNum = std::dynamic_pointer_cast<AstNum>(astNode)) {
-        stream << '"' << "[NUM] " << id << " " << astNum->num << '"' << "\n";
+    } else if (auto astInt = std::dynamic_pointer_cast<AstInt>(astNode)) {
+        stream << '"' << "[INT] " << id << " " << astInt->num << '"' << "\n";
+    } else if (auto astFloat = std::dynamic_pointer_cast<AstFloat>(astNode)) {
+        stream << '"' << "[FLOAT] " << id << " " << astFloat->num << '"' << "\n";
     }
 }
 
@@ -99,7 +101,7 @@ int main(int argc, char *argv[])
                                      LexicalAnalyzerConstructor::allLettersAndDigits + "*",
                                  TerminalSymbol::ID);
     thompsonConstructor->addRule("\\+", TerminalSymbol::ID);
-    thompsonConstructor->addRule(ThompsonConstructor::allDigits, TerminalSymbol::NUMBER);
+    thompsonConstructor->addRule(ThompsonConstructor::allDigits, TerminalSymbol::INT);
     thompsonConstructor->addRule(" +", TerminalSymbol::BLANK);
     thompsonConstructor->addRule("\n+", TerminalSymbol::NEWLINE);
     std::cout << "Lexer rules were added\n";
@@ -142,7 +144,7 @@ int main(int argc, char *argv[])
 
     syntaxAnalyzer.addRules(NonTerminalSymbol::BOOLEAN,
                             {{TerminalSymbol::TRUE_LIT}, {TerminalSymbol::FALSE_LIT}});
-    syntaxAnalyzer.addRules(NonTerminalSymbol::LITERAL, {{TerminalSymbol::NUMBER},
+    syntaxAnalyzer.addRules(NonTerminalSymbol::LITERAL, {{TerminalSymbol::INT},
                                                          {NonTerminalSymbol::BOOLEAN},
                                                          {TerminalSymbol::CHARACTER},
                                                          {TerminalSymbol::STRING}});

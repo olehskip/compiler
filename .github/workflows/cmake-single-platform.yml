@@ -23,7 +23,7 @@ jobs:
     - name: Configure CMake
       run: cmake -S . -B ./build
       env:
-        CC: ${{ matrix.compiler }}
+        CXX: ${{ matrix.compiler }}
 
     - name: Build
       run: cmake --build build/ -j

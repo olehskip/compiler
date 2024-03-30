@@ -8,7 +8,11 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        compier: [g++-latest, clang-latest]
 
     steps:
     - uses: actions/checkout@v4
@@ -18,6 +22,8 @@ jobs:
 
     - name: Configure CMake
       run: cmake -S . -B ./build
+      env:
+        CC: ${{ matrix.compiler }}
 
     - name: Build
       run: cmake --build build/ -j

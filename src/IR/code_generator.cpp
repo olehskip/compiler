@@ -23,8 +23,6 @@ static Value::SharedPtr _generateSsaEq(AstNode::SharedPtr astNode,
             _generateSsaEq(child, simpleBlock, symbolTable);
         }
         return nullptr;
-    } else if (auto astProcedureDef = std::dynamic_pointer_cast<AstProcedureDefinition>(astNode)) {
-        NOT_IMPLEMENTED;
     } else if (auto astBeginExpr = std::dynamic_pointer_cast<AstBeginExpr>(astNode)) {
         auto newSymbolTable = std::make_shared<SymbolTable>(symbolTable);
         Value::SharedPtr lastChildProcessed;
@@ -33,6 +31,8 @@ static Value::SharedPtr _generateSsaEq(AstNode::SharedPtr astNode,
         }
         ASSERT(lastChildProcessed);
         return lastChildProcessed;
+    } else if (auto astProcedureDef = std::dynamic_pointer_cast<AstProcedureDef>(astNode)) {
+        NOT_IMPLEMENTED;
     } else if (auto astProcedureCall = std::dynamic_pointer_cast<AstProcedureCall>(astNode)) {
         const size_t childrenSize = astProcedureCall->children.size();
         std::vector<Value::SharedPtr> args;
@@ -47,15 +47,23 @@ static Value::SharedPtr _generateSsaEq(AstNode::SharedPtr astNode,
         auto procedure = symbolTable->getProcedure(astProcedureCall->name, argsTypes);
         if (!procedure) {
             LOG_FATAL << "Can't find procedure with name " << astProcedureCall->name
-                      << " in symbol table\n";
+                      << " in symbol table";
         }
         ASSERT(procedure);
         auto callInst = std::make_shared<CallInst>(std::shared_ptr<Procedure>(procedure), args,
                                                    astProcedureCall->name);
         simpleBlock->insts.push_back(callInst);
         return callInst;
+    } else if (auto astVarDef = std::dynamic_pointer_cast<AstVarDef>(astNode)) {
+        auto varExprProcessed = _generateSsaEq(astVarDef->expr, simpleBlock, symbolTable);
+        ASSERT(varExprProcessed);
+        symbolTable->addNewVar(astVarDef->name, varExprProcessed);
+        return varExprProcessed;
     } else if (auto astId = std::dynamic_pointer_cast<AstId>(astNode)) {
-        NOT_IMPLEMENTED;
+        // TODO: it isn't clean that astId can be only variables
+        auto var = symbolTable->getVar(astId->name);
+        ASSERT_MSG(var, "can't find variable with name = " << astId->name);
+        return var;
     } else if (auto astInt = std::dynamic_pointer_cast<AstInt>(astNode)) {
         auto constInt = std::make_shared<ConstantInt>(astInt->num);
         return constInt;

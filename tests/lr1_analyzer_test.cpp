@@ -127,9 +127,7 @@ TEST(Recursion, LeftRecursion)
     syntaxAnalyzer->addRule(NonTerminalSymbol::EXPR,
                             {NonTerminalSymbol::EXPR, TerminalSymbol::ASSIGN_OP});
     syntaxAnalyzer->addRule(NonTerminalSymbol::EXPR, {TerminalSymbol::BLANK});
-    std::cout << "before parsing\n";
     syntaxAnalyzer->start();
-    std::cout << "after parsing\n";
     auto expectedTree = std::make_shared<NonTerminalSymbolSt>(
         NonTerminalSymbol::PROGRAM,
         SymbolsSt{std::make_shared<NonTerminalSymbolSt>(

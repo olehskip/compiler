@@ -94,13 +94,14 @@ int main(int argc, char *argv[])
         NonTerminalSymbol::STARTS,
         {{NonTerminalSymbol::STARTS, NonTerminalSymbol::START}, {NonTerminalSymbol::START}});
     syntaxAnalyzer.addRules(NonTerminalSymbol::START,
-                            {{NonTerminalSymbol::PROCEDURE_DEFINITION}, {NonTerminalSymbol::EXPR}});
+                            {{NonTerminalSymbol::PROCEDURE_DEF}, {NonTerminalSymbol::EXPR}});
 
     // TODO: maybe move BEGIN_EXPR under EXPR?
     syntaxAnalyzer.addRules(
         NonTerminalSymbol::EXPRS,
         {{NonTerminalSymbol::EXPRS, NonTerminalSymbol::EXPR}, {NonTerminalSymbol::EXPR}});
     syntaxAnalyzer.addRules(NonTerminalSymbol::EXPR, {{NonTerminalSymbol::BEGIN_EXPR},
+                                                      {NonTerminalSymbol::VAR_DEF},
                                                       {TerminalSymbol::ID},
                                                       {NonTerminalSymbol::LITERAL},
                                                       {NonTerminalSymbol::PROCEDURE_CALL}});
@@ -108,15 +109,7 @@ int main(int argc, char *argv[])
                            {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::BEGIN,
                             NonTerminalSymbol::EXPRS, TerminalSymbol::CLOSED_BRACKET});
 
-    syntaxAnalyzer.addRule(NonTerminalSymbol::PROCEDURE_CALL,
-                           {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::ID,
-                            NonTerminalSymbol::OPERANDS, TerminalSymbol::CLOSED_BRACKET});
-    syntaxAnalyzer.addRules(
-        NonTerminalSymbol::OPERANDS,
-        {{NonTerminalSymbol::OPERANDS, NonTerminalSymbol::OPERAND}, {NonTerminalSymbol::OPERAND}});
-    syntaxAnalyzer.addRule(NonTerminalSymbol::OPERAND, {NonTerminalSymbol::EXPR});
-
-    syntaxAnalyzer.addRule(NonTerminalSymbol::PROCEDURE_DEFINITION,
+    syntaxAnalyzer.addRule(NonTerminalSymbol::PROCEDURE_DEF,
                            {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::DEFINE,
                             TerminalSymbol::OPEN_BRACKET, TerminalSymbol::ID,
                             NonTerminalSymbol::PROCEDURE_PARAMS, TerminalSymbol::CLOSED_BRACKET,
@@ -126,6 +119,18 @@ int main(int argc, char *argv[])
         {{NonTerminalSymbol::PROCEDURE_PARAMS, NonTerminalSymbol::PROCEDURE_PARAM},
          {NonTerminalSymbol::PROCEDURE_PARAM}});
     syntaxAnalyzer.addRule(NonTerminalSymbol::PROCEDURE_PARAM, {TerminalSymbol::ID});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::PROCEDURE_CALL,
+                           {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::ID,
+                            NonTerminalSymbol::OPERANDS, TerminalSymbol::CLOSED_BRACKET});
+    syntaxAnalyzer.addRules(
+        NonTerminalSymbol::OPERANDS,
+        {{NonTerminalSymbol::OPERANDS, NonTerminalSymbol::OPERAND}, {NonTerminalSymbol::OPERAND}});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::OPERAND, {NonTerminalSymbol::EXPR});
+
+    syntaxAnalyzer.addRule(NonTerminalSymbol::VAR_DEF,
+                           {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::DEFINE,
+                            TerminalSymbol::ID, NonTerminalSymbol::EXPR,
+                            TerminalSymbol::CLOSED_BRACKET});
 
     syntaxAnalyzer.addRules(NonTerminalSymbol::BOOLEAN,
                             {{TerminalSymbol::TRUE_LIT}, {TerminalSymbol::FALSE_LIT}});
@@ -143,16 +148,17 @@ int main(int argc, char *argv[])
     auto lexicalRet = lexicalAnalyzer.parse(code);
     lexicalRet.push_back(std::make_shared<TerminalSymbolSt>(TerminalSymbol::FINISH, ""));
     removeBlankNewlineTerminals(lexicalRet);
-    ASSERT(!isLexicalError(lexicalRet));
+    ASSERT_MSG(!isLexicalError(lexicalRet), "Lexical analysis failed");
     std::cout << "Code was successfully parsed by lexical analyzer\n";
     auto syntaxRet = syntaxAnalyzer.parse(lexicalRet);
-    ASSERT(syntaxRet);
+    ASSERT_MSG(syntaxRet, "Syntax analysis failed");
     std::cout << "Code was successfully parsed by syntax analyzer\n";
     std::cout << "Code was successfully fully parsed\n";
     saveSt(syntaxRet, outputPath + "/st.txt");
     std::cout << "ST was saved\n";
 
     auto ast = convertToAst(syntaxRet);
+    std::cout << "AST was created\n";
     saveAst(ast, outputPath + "/ast.txt");
     std::cout << "AST was saved\n";
 

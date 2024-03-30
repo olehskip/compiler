@@ -1,11 +1,36 @@
 #include "parser_utils.hpp"
 #include "log.hpp"
 
-#include <stack> 
+#include <stack>
 
 static std::vector<AstNode::SharedPtr> processGeneral(SymbolSt::SharedPtr node);
 
-static std::string processProcedureName(SymbolSt::SharedPtr node)
+static AstProgram::SharedPtr processProgram(NonTerminalSymbolSt::SharedPtr node)
+{
+    auto ret = std::make_shared<AstProgram>();
+    for (auto child : node->children) {
+        auto processedChildren = processGeneral(child);
+        ret->children.insert(ret->children.end(), processedChildren.begin(),
+                             processedChildren.end());
+    }
+    ASSERT(ret->children.size() > 0);
+    return ret;
+}
+
+static AstBeginExpr::SharedPtr processBeginExpr(NonTerminalSymbolSt::SharedPtr node)
+{
+    auto ret = std::make_shared<AstBeginExpr>();
+    ASSERT(node->children.size() >= 4); // ( begin EXPR+)
+    for (size_t i = 2; i < node->children.size() - 1; ++i) {
+        auto processedChildren = processGeneral(node->children[i]);
+        ret->children.insert(ret->children.end(), processedChildren.begin(),
+                             processedChildren.end());
+    }
+    ASSERT(ret->children.size() > 0);
+    return ret;
+}
+
+static std::string processName(SymbolSt::SharedPtr node)
 {
     auto terminalSt = std::dynamic_pointer_cast<TerminalSymbolSt>(node);
     ASSERT(terminalSt);
@@ -44,12 +69,11 @@ static std::vector<AstId::SharedPtr> processProcedureParams(SymbolSt::SharedPtr 
     }
 }
 
-static AstProcedureDefinition::SharedPtr
-processProcedureDefinition(NonTerminalSymbolSt::SharedPtr node)
+static AstProcedureDef::SharedPtr processProcedureDef(NonTerminalSymbolSt::SharedPtr node)
 {
-    auto ret = std::make_shared<AstProcedureDefinition>();
+    auto ret = std::make_shared<AstProcedureDef>();
     ASSERT(node->children.size() >= 6); // ( define (PROCEDURE_NAME ARG*) body )
-    ret->name = processProcedureName(node->children[3]);
+    ret->name = processName(node->children[3]);
     // TODO: add support for no params
     if (node->children.size() > 6) {
         ret->params = processProcedureParams(node->children[4]);
@@ -58,6 +82,17 @@ processProcedureDefinition(NonTerminalSymbolSt::SharedPtr node)
     auto processedBody = processGeneral(node->children[6]);
     ASSERT(processedBody.size() == 1);
     ret->body = processedBody.front();
+    return ret;
+}
+
+static AstVarDef::SharedPtr processVarDef(NonTerminalSymbolSt::SharedPtr node)
+{
+    auto ret = std::make_shared<AstVarDef>();
+    ASSERT(node->children.size() >= 5); // ( define VAR_NAME EXPR )
+    ret->name = processName(node->children[2]);
+    auto processedExprs = processGeneral(node->children[3]);
+    ASSERT(processedExprs.size() == 1);
+    ret->expr = processedExprs.front();
     return ret;
 }
 
@@ -89,37 +124,12 @@ static AstProcedureCall::SharedPtr processProcedureCall(NonTerminalSymbolSt::Sha
 {
     auto ret = std::make_shared<AstProcedureCall>();
     ASSERT(node->children.size() >= 3); // ( PROCEDURE_NAME OPERATOR* )
-    ret->name = processProcedureName(node->children[1]);
+    ret->name = processName(node->children[1]);
     if (node->children.size() > 3) {
         ret->children = processOperands(node->children[2]);
         ASSERT(ret->children.size() > 0);
     }
 
-    return ret;
-}
-
-static AstProgram::SharedPtr processProgram(NonTerminalSymbolSt::SharedPtr node)
-{
-    auto ret = std::make_shared<AstProgram>();
-    for (auto child : node->children) {
-        auto processedChildren = processGeneral(child);
-        ret->children.insert(ret->children.end(), processedChildren.begin(),
-                             processedChildren.end());
-    }
-    ASSERT(ret->children.size() > 0);
-    return ret;
-}
-
-static AstBeginExpr::SharedPtr processBeginExpr(NonTerminalSymbolSt::SharedPtr node)
-{
-    auto ret = std::make_shared<AstBeginExpr>();
-    ASSERT(node->children.size() >= 4); // ( begin EXPR+)
-    for (size_t i = 2; i < node->children.size() - 1; ++i) {
-        auto processedChildren = processGeneral(node->children[i]);
-        ret->children.insert(ret->children.end(), processedChildren.begin(),
-                             processedChildren.end());
-    }
-    ASSERT(ret->children.size() > 0);
     return ret;
 }
 
@@ -133,7 +143,7 @@ static std::vector<AstNode::SharedPtr> processGeneral(SymbolSt::SharedPtr node)
             ret->num = std::stoi(terminalSt->text);
             return {ret};
         } else {
-            LOG_FATAL << "terminal " + getSymbolName(terminalSt->symbolType) + " not implemented\n";
+            LOG_FATAL << "terminal " + getSymbolName(terminalSt->symbolType) + " not implemented";
         }
     } else if (auto nonTerminalSt = std::dynamic_pointer_cast<NonTerminalSymbolSt>(node)) {
         switch (nonTerminalSt->symbolType) {
@@ -153,14 +163,18 @@ static std::vector<AstNode::SharedPtr> processGeneral(SymbolSt::SharedPtr node)
                 }
                 return ret;
             }
-            case NonTerminalSymbol::PROCEDURE_DEFINITION: {
-                auto ret =
-                    std::dynamic_pointer_cast<AstNode>(processProcedureDefinition(nonTerminalSt));
+            case NonTerminalSymbol::PROCEDURE_DEF: {
+                auto ret = std::dynamic_pointer_cast<AstNode>(processProcedureDef(nonTerminalSt));
                 ASSERT(ret);
                 return {ret};
             }
             case NonTerminalSymbol::PROCEDURE_CALL: {
                 auto ret = std::dynamic_pointer_cast<AstNode>(processProcedureCall(nonTerminalSt));
+                ASSERT(ret);
+                return {ret};
+            }
+            case NonTerminalSymbol::VAR_DEF: {
+                auto ret = std::dynamic_pointer_cast<AstNode>(processVarDef(nonTerminalSt));
                 ASSERT(ret);
                 return {ret};
             }
@@ -170,7 +184,7 @@ static std::vector<AstNode::SharedPtr> processGeneral(SymbolSt::SharedPtr node)
             }
             default: {
                 LOG_FATAL << "nonterminal " + getSymbolName(nonTerminalSt->symbolType) +
-                                 " not implemented\n";
+                                 " not implemented";
             }
         }
     }
@@ -238,6 +252,7 @@ TerminalSymbolsSt getLeafsSt(SymbolSt::SharedPtr root)
     return ret;
 }
 
+// TODO: this function is super ugly
 void prettyAst(AstNode::SharedPtr astNode, std::stringstream &stream)
 {
     const auto id = std::to_string((unsigned long long)astNode.get());
@@ -253,7 +268,7 @@ void prettyAst(AstNode::SharedPtr astNode, std::stringstream &stream)
             stream << "\t" << '"' << "[BEGIN_EXPR] " << id << '"' << " -> ";
             prettyAst(child, stream);
         }
-    } else if (auto astProcedureDef = std::dynamic_pointer_cast<AstProcedureDefinition>(astNode)) {
+    } else if (auto astProcedureDef = std::dynamic_pointer_cast<AstProcedureDef>(astNode)) {
         stream << '"' << "[PROCEDURE DEF] " << id << " " << astProcedureDef->name << '"' << "\n";
         for (auto child : astProcedureDef->params) {
             stream << "\t" << '"' << "[PROCEDURE DEF] " << id << " " << astProcedureDef->name << '"'
@@ -270,6 +285,10 @@ void prettyAst(AstNode::SharedPtr astNode, std::stringstream &stream)
                    << '"' << " -> ";
             prettyAst(child, stream);
         }
+    } else if (auto astVarDef = std::dynamic_pointer_cast<AstVarDef>(astNode)) {
+        stream << '"' << "[VAR DEF] " << id << " " << astVarDef->name << '"' << "\n";
+        stream << "\t" << '"' << "[VAR DEF] " << id << " " << astVarDef->name << '"' << " -> ";
+        prettyAst(astVarDef->expr, stream);
     } else if (auto astId = std::dynamic_pointer_cast<AstId>(astNode)) {
         stream << '"' << "[ID] " << id << " " << astId->name << '"' << "\n";
     } else if (auto astInt = std::dynamic_pointer_cast<AstInt>(astNode)) {

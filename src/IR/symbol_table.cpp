@@ -31,3 +31,19 @@ Procedure::SharedPtr SymbolTable::getProcedure(std::string name, std::vector<Typ
     }
     return nullptr;
 }
+void SymbolTable::addNewVar(std::string name, Value::SharedPtr varValue)
+{
+    varsTable[name] = varValue;
+}
+
+Value::SharedPtr SymbolTable::getVar(std::string name)
+{
+    auto it = varsTable.find(name);
+    if (it != varsTable.end()) {
+        return it->second;
+    } else if (auto lockedParent = parent.lock()) {
+        return lockedParent->getVar(name);
+    } else {
+        return nullptr;
+    }
+}

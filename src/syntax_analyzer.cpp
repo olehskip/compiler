@@ -1,5 +1,6 @@
 #include "syntax_analyzer.hpp"
 #include "log.hpp"
+#include "utils.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -287,13 +288,20 @@ ItemsSet SyntaxAnalyzer::gotoItems(const ItemsSet &itemsSet, Symbol symbol)
     return closure(resSet);
 }
 
+static void reportConflict(const Decision &decision, Symbol lookaheadSym)
+{
+    LOG_FATAL << "Conflict: can't add decision with type = " << variantTypeToString(decision)
+              << ", because decision with type = " << variantTypeToString(decision)
+              << "; lookaheadSymbol = " << getSymbolName(lookaheadSym);
+}
+
 void SyntaxAnalyzer::fillStateTables(const State::SharedPtr state)
 {
     // add reductions
     for (auto &item : state->itemsSet) {
         if (item.pos == item.rhs.size()) {
-            if (state->getDecision(item.lookaheadSymbol)) {
-                LOG_FATAL << "Conflict. Can't add reduction";
+            if (const auto &existingDecision = state->getDecision(item.lookaheadSymbol)) {
+                reportConflict(*existingDecision, item.lookaheadSymbol);
             }
 
             state->addDecision(item.lookaheadSymbol, ReduceDecision{item.lhs, item.rhs});
@@ -306,8 +314,8 @@ void SyntaxAnalyzer::fillStateTables(const State::SharedPtr state)
         if (destStateItems.empty()) {
             continue;
         }
-        if (state->getDecision(symbol)) {
-            LOG_FATAL << "Conflict. Can't add shift.\n";
+        if (const auto &existingDecision = state->getDecision(symbol)) {
+            reportConflict(*existingDecision, symbol);
         }
         auto destState = std::make_shared<State>(destStateItems);
         /*

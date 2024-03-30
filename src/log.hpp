@@ -24,6 +24,7 @@ enum class LogLevel
 };
 
 // TODO: I don't like the fact, that one can do auto a = Logger(LogLevel::FATAL);
+// TODO: add INFO LogLevel that doesn't print source location
 class Logger
 {
 public:
@@ -78,6 +79,7 @@ private:
 };
 
 using LOG = Logger;
+#define LOG_WARNING LOG(LogLevel::WARNING)
 #define LOG_FATAL LOG(LogLevel::FATAL)
 
 // TODO: add NOT_LIKELY

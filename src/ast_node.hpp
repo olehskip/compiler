@@ -10,8 +10,9 @@ enum class AstNodeType
     UKNOWN,
     PROGRAM,
     BEGIN_EXPR,
-    PROCEDURE_DEFINITION,
+    PROCEDURE_DEF,
     PROCEDURE_CALL,
+    VAR_DEF,
     ID,
     INT,
     FLOAT
@@ -27,6 +28,7 @@ public:
 
     AstNode::SharedPtr parent;
 
+    // it exists rather for debug
     const AstNodeType astNodeType;
 };
 
@@ -77,12 +79,12 @@ public:
     using SharedPtr = std::shared_ptr<AstFloat>;
 };
 
-class AstProcedureDefinition : public AstNode
+class AstProcedureDef : public AstNode
 {
 public:
-    using SharedPtr = std::shared_ptr<AstProcedureDefinition>;
+    using SharedPtr = std::shared_ptr<AstProcedureDef>;
 
-    AstProcedureDefinition() : AstNode(AstNodeType::PROCEDURE_DEFINITION) {}
+    AstProcedureDef() : AstNode(AstNodeType::PROCEDURE_DEF) {}
 
     std::string name;
     std::vector<AstId::SharedPtr> params;
@@ -98,6 +100,17 @@ public:
 
     std::string name;
     std::vector<AstNode::SharedPtr> children;
+};
+
+class AstVarDef : public AstNode
+{
+public:
+    using SharedPtr = std::shared_ptr<AstVarDef>;
+
+    AstVarDef() : AstNode(AstNodeType::VAR_DEF) {}
+
+    std::string name;
+    AstNode::SharedPtr expr;
 };
 
 #endif // AST_NODE_HPP

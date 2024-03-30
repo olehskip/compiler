@@ -1,0 +1,9 @@
+(define x (+ 1 2))
+(display x)
+(display
+    ( begin
+        (define y 4)
+        (+ x y)
+    )
+)
+

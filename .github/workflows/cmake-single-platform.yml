@@ -2,7 +2,7 @@ name: CMake compiler build
 
 on:
   push:
-    branches: [ "*" ]
+    branches: [ "try_cmake_workflow" ]
   pull_request:
     branches: [ "master" ]
 

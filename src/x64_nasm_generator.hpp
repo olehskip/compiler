@@ -50,6 +50,6 @@ private:
     const uint64_t data;
 };
 
-void generateX64Asm(SsaSeq &ssaSeq, std::stringstream &stream);
+void generateX64Asm(SimpleBlock::SharedPtr ssaSeq, std::stringstream &stream);
 
 #endif // X64_NASM_GENERATOR_HPP

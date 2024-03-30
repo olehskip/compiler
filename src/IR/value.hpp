@@ -12,6 +12,7 @@ public:
     {
         UINT64,
         FLOAT,
+        LABEL,
         VOID,
     };
     const TypeID typeID;
@@ -42,7 +43,7 @@ class Value
 public:
     Value(Type ty_) : ty(ty_) {}
     virtual ~Value() {}
-    virtual std::string pretty() const = 0;
+    virtual void pretty(std::stringstream &stream) const = 0;
     const Type ty;
     using SharedPtr = std::shared_ptr<Value>;
 };
@@ -51,7 +52,7 @@ class ConstantInt : public Value
 {
 public:
     ConstantInt(uint64_t val_) : Value(Type::TypeID::UINT64), val(val_) {}
-    std::string pretty() const override;
+    void pretty(std::stringstream &stream) const override;
 
     const uint64_t val;
 };
@@ -60,7 +61,7 @@ class ConstantFloat : public Value
 {
 public:
     ConstantFloat(uint64_t val_) : Value(Type::TypeID::FLOAT), val(val_) {}
-    std::string pretty() const override;
+    void pretty(std::stringstream &stream) const override;
 
     const uint64_t val;
 };
@@ -72,7 +73,7 @@ public:
         : Value(returnType), name(name_), argsTypes(argsTypes_)
     {
     }
-    std::string pretty() const override;
+    void pretty(std::stringstream &stream) const override;
 
     const std::string name;
     const std::vector<Type> argsTypes;

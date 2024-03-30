@@ -1,6 +1,6 @@
 #include "syntax_analyzer.hpp"
+#include "log.hpp"
 
-#include <cassert>
 #include <fstream>
 #include <iostream>
 #include <set>
@@ -10,7 +10,7 @@
 Item::Item(Rule rule, size_t tPos, Symbol tLookaheadSymbol)
     : Rule(std::move(rule)), pos(tPos), lookaheadSymbol(tLookaheadSymbol)
 {
-    assert(pos <= rule.rhs.size());
+    ASSERT(pos <= rule.rhs.size());
 }
 
 Item::Item(Item item, size_t tPos) : pos(tPos), lookaheadSymbol(item.lookaheadSymbol)
@@ -33,7 +33,7 @@ std::optional<Decision> State::getDecision(Symbol lookaheadSymbol)
 
 void State::addDecision(Symbol lookaheadSymbol, Decision decision)
 {
-    assert(decisionTable.find(lookaheadSymbol) == decisionTable.end());
+    ASSERT(decisionTable.find(lookaheadSymbol) == decisionTable.end());
     decisionTable[lookaheadSymbol] = decision;
 }
 
@@ -49,7 +49,7 @@ State::SharedPtr State::getGotoState(Symbol lookaheadSymbol)
 
 void State::addGotoState(Symbol lookaheadSymbol, State::SharedPtr state)
 {
-    assert(gotoTable.find(lookaheadSymbol) == gotoTable.end());
+    ASSERT(gotoTable.find(lookaheadSymbol) == gotoTable.end());
     gotoTable[lookaheadSymbol] = state;
 }
 
@@ -242,7 +242,7 @@ ItemsSet SyntaxAnalyzer::closure(const ItemsSet &itemsSet)
         if (item.pos == item.rhs.size()) {
             continue;
         }
-        assert(item.pos < item.rhs.size());
+        ASSERT(item.pos < item.rhs.size());
         const auto &itemCurrSymbol = item.rhs[item.pos];
 
         Symbols itemTail;
@@ -293,8 +293,7 @@ void SyntaxAnalyzer::fillStateTables(const State::SharedPtr state)
     for (auto &item : state->itemsSet) {
         if (item.pos == item.rhs.size()) {
             if (state->getDecision(item.lookaheadSymbol)) {
-                std::cerr << "Conflict. Can't add reduction.\n";
-                abort();
+                LOG_FATAL << "Conflict. Can't add reduction";
             }
 
             state->addDecision(item.lookaheadSymbol, ReduceDecision{item.lhs, item.rhs});
@@ -308,8 +307,7 @@ void SyntaxAnalyzer::fillStateTables(const State::SharedPtr state)
             continue;
         }
         if (state->getDecision(symbol)) {
-            std::cerr << "Conflict. Can't add shift.\n";
-            abort();
+            LOG_FATAL << "Conflict. Can't add shift.\n";
         }
         auto destState = std::make_shared<State>(destStateItems);
         /*
@@ -347,7 +345,7 @@ void SyntaxAnalyzer::fillStateTables(const State::SharedPtr state)
     }
 }
 
-static void prettySt(SymbolSt::SharedPtr stNode, std::stringstream &stream)
+void prettySt(SymbolSt::SharedPtr stNode, std::stringstream &stream)
 {
     const auto id = std::to_string((unsigned long long)stNode.get());
     if (auto nonTerminalSymbolSt = std::dynamic_pointer_cast<NonTerminalSymbolSt>(stNode)) {
@@ -366,17 +364,8 @@ static void prettySt(SymbolSt::SharedPtr stNode, std::stringstream &stream)
         }
     } else if (auto terminalSymbolSt = std::dynamic_pointer_cast<TerminalSymbolSt>(stNode)) {
         const auto symbolName = getSymbolName(terminalSymbolSt->symbolType);
-        stream << "\t" << '"' << symbolName << " " << id << '"';
+        stream << "\t" << '"' << symbolName << " " << terminalSymbolSt->text << " " << id << '"';
     } else {
-        assert(!"Should not happen");
+        SHOULD_NOT_HAPPEN;
     }
-}
-
-void saveSt(NonTerminalSymbolSt::SharedPtr programSt, std::string filepath)
-{
-    std::stringstream stream;
-    prettySt(programSt, stream);
-    std::ofstream file(filepath);
-    file << stream.rdbuf();
-    file.close();
 }

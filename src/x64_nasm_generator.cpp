@@ -1,6 +1,5 @@
 #include "x64_nasm_generator.hpp"
-
-#include <cassert>
+#include "log.hpp"
 
 #include <sstream>
 
@@ -12,13 +11,13 @@ public:
         currentOffset += 8;
         const StackRegister ret(currentOffset);
         const bool wasInserted = container.insert({value, ret}).second;
-        assert(wasInserted);
+        ASSERT(wasInserted);
         return ret;
     }
 
     StackRegister getStackRegister(Value::SharedPtr value)
     {
-        assert(container.contains(value));
+        ASSERT(container.contains(value));
         return container.at(value);
     }
 
@@ -41,11 +40,13 @@ static std::string getParamRegisterName(unsigned long long paramIdx)
             return "rsi";
     }
 
-    assert(!"Invalid paramIdx");
+    ASSERT("Invalid paramIdx");
+    return {};
 }
 
-void generateX64Asm(SsaSeq &ssaSeq, std::stringstream &stream)
+void generateX64Asm(SimpleBlock::SharedPtr mainSimpleBlock, std::stringstream &stream)
 {
+    ASSERT(mainSimpleBlock);
     Stack stack;
 
     stream << "extern display_int\n";
@@ -54,21 +55,21 @@ void generateX64Asm(SsaSeq &ssaSeq, std::stringstream &stream)
     stream << "global _start\n";
     stream << "_start:\n";
     stream << "mov rbp, rsp\n";
-    for (auto inst : ssaSeq.insts) {
+    for (auto inst : mainSimpleBlock->insts) {
         if (auto callInst = std::dynamic_pointer_cast<CallInst>(inst)) {
             std::vector<Type> argsTypes;
             for (auto arg : callInst->args) {
                 argsTypes.push_back(arg->ty);
             }
-            auto procedure = ssaSeq.symbolTable->getProcedure(callInst->procedureName, argsTypes);
-            assert(procedure);
+            auto procedure = callInst->procedure;
+            ASSERT(procedure);
             std::string asmProcedureName;
             if (callInst->procedureName == "+") {
                 asmProcedureName = "plus_int";
             } else if (callInst->procedureName == "display") {
                 asmProcedureName = "display_int";
             }
-            assert(asmProcedureName.size());
+            ASSERT(asmProcedureName.size());
             for (size_t argIdx = 0; argIdx < callInst->args.size(); ++argIdx) {
                 auto arg = callInst->args[argIdx];
                 if (auto constIntArg = std::dynamic_pointer_cast<ConstantInt>(arg)) {
@@ -86,7 +87,7 @@ void generateX64Asm(SsaSeq &ssaSeq, std::stringstream &stream)
                 stack.allocate(callInst);
             }
         } else {
-            assert(!"Not precessed ssa form type");
+            ASSERT("Not precessed ssa form type");
         }
     }
 

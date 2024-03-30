@@ -1,19 +1,19 @@
 #include "instructions.hpp"
 
-std::string CallInst::pretty() const // override
+#include <sstream>
+
+void CallInst::pretty(std::stringstream &stream) const // override
 {
-    std::string ret = "call \"" + procedureName + "\" (";
-    std::string argsPretty;
+    stream << "call \"" << procedureName << "\" (";
     for (auto argIt = args.begin(); argIt != args.end(); ++argIt) {
         if (argIt != args.begin()) {
-            ret += ", ";
+            stream << ", ";
         }
         if (auto constantIntArg = std::dynamic_pointer_cast<ConstantInt>(*argIt)) {
-            ret += std::to_string(constantIntArg->val);
+            constantIntArg->pretty(stream);
         } else {
-            ret += "$" + std::to_string(uint64_t(argIt->get()));
+            stream << "$" << uint64_t(argIt->get());
         }
     }
-    ret += ")";
-    return ret;
+    stream << ")";
 }

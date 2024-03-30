@@ -24,6 +24,7 @@ enum class TerminalSymbol
     CLOSED_BRACKET,
     ID,
     DEFINE,
+    BEGIN,
 
     FINISH,
 
@@ -43,6 +44,7 @@ enum class NonTerminalSymbol
 
     EXPRS,
     EXPR,
+    BEGIN_EXPR,
     EPS, // TODO: remove it
 
     DATUM,

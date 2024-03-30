@@ -19,10 +19,16 @@ set(SOURCES
     src/IR/code_generator.cpp
     src/IR/value.cpp
     src/IR/instructions.cpp
+    src/IR/symbol_table.cpp
 )
 
 add_library(${COMPILER_LIB_OUTPUT} STATIC ${SOURCES})
+if(NOT DEFINED LOG_EXIT_FUNC)
+    set(LOG_EXIT_FUNC STD_EXIT)
+endif()
+message ("LOG_EXIT_FUNC = " ${LOG_EXIT_FUNC})
 target_compile_options(${COMPILER_LIB_OUTPUT} PUBLIC "-Wall" "-Wextra" "-Wpedantic" "-O0" "-g")
+target_compile_definitions(${COMPILER_LIB_OUTPUT} PUBLIC LOG_EXIT_FUNC=${LOG_EXIT_FUNC})
 target_include_directories(${COMPILER_LIB_OUTPUT} PUBLIC ${MAGIC_ENUM_INCLUDES})
 target_include_directories(${COMPILER_LIB_OUTPUT} PUBLIC src)
 

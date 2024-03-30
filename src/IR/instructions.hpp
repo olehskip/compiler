@@ -64,7 +64,7 @@ public:
     {
     }
 
-    std::string pretty() const override;
+    void pretty(std::stringstream &stream) const override;
 
     Procedure::SharedPtr procedure;
     std::vector<Value::SharedPtr> args;

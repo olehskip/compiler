@@ -9,6 +9,7 @@ enum class AstNodeType
 {
     UKNOWN,
     PROGRAM,
+    BEGIN_EXPR,
     PROCEDURE_DEFINITION,
     PROCEDURE_CALL,
     ID,
@@ -35,6 +36,16 @@ public:
     using SharedPtr = std::shared_ptr<AstProgram>;
 
     AstProgram() : AstNode(AstNodeType::PROGRAM) {}
+
+    std::vector<AstNode::SharedPtr> children;
+};
+
+class AstBeginExpr : public AstNode
+{
+public:
+    using SharedPtr = std::shared_ptr<AstBeginExpr>;
+
+    AstBeginExpr() : AstNode(AstNodeType::BEGIN_EXPR) {}
 
     std::vector<AstNode::SharedPtr> children;
 };

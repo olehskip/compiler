@@ -41,7 +41,8 @@ public:
     inline static const std::string allLetters =
         "[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]";
     inline static const std::string allDigits = "[0123456789]";
-    inline static const std::string allLettersAndDigits = "[" + allLetters + allDigits + "]";
+    inline static const std::string allLettersDigits = "[" + allLetters + allDigits + "]";
+    inline static const std::string allLettersDigitsSpace = "[" + allLettersDigits + " ]";
 
 protected:
     friend LexicalAnalyzer;

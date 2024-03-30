@@ -1,78 +1,61 @@
 #include "code_generator.hpp"
+#include "log.hpp"
 
-#include <cassert>
-#include <functional>
-#include <iostream>
-#include <optional>
 #include <sstream>
 
-void SymbolTable::addNewProcedure(Procedure::SharedPtr procedure)
+void SimpleBlock::pretty(std::stringstream &stream) const // override
 {
-    proceduresTable[procedure->name].push_back(procedure);
-}
-
-Procedure::SharedPtr SymbolTable::getProcedure(std::string name, std::vector<Type> argsTypes)
-{
-    auto vec = proceduresTable[name];
-    for (auto procedure : vec) {
-        assert(procedure);
-        if (procedure->argsTypes.size() != argsTypes.size()) {
-            continue;
-        }
-        const bool areArgsSame =
-            std::equal(procedure->argsTypes.begin(), procedure->argsTypes.end(), argsTypes.begin(),
-                       [](Type procedureArgType, Type givenArggType) {
-                           return procedureArgType.typeID == givenArggType.typeID;
-                       });
-        if (areArgsSame) {
-            return procedure;
-        }
-    }
-
-    return nullptr;
-}
-
-void SsaSeq::pretty(std::stringstream &stream)
-{
-    std::cout << "pretty\n";
     for (size_t idx = 0; idx < insts.size(); ++idx) {
-        stream << "$" << std::to_string(uint64_t(insts[idx].get())) << " = " << insts[idx]->pretty()
-               << "\n";
+        stream << "$" << std::to_string(uint64_t(insts[idx].get())) << " = ";
+        insts[idx]->pretty(stream);
+        stream << "\n";
     }
 }
 
-static Value::SharedPtr _generateSsaEq(AstNode::SharedPtr astNode, SsaSeq &ssaSeq)
+static Value::SharedPtr _generateSsaEq(AstNode::SharedPtr astNode,
+                                       SimpleBlock::SharedPtr simpleBlock,
+                                       SymbolTable::SharedPtr symbolTable)
 {
+    ASSERT(astNode);
+    ASSERT(simpleBlock);
     if (auto astProgram = std::dynamic_pointer_cast<AstProgram>(astNode)) {
         for (auto child : astProgram->children) {
-            _generateSsaEq(child, ssaSeq);
+            _generateSsaEq(child, simpleBlock, symbolTable);
         }
         return nullptr;
     } else if (auto astProcedureDef = std::dynamic_pointer_cast<AstProcedureDefinition>(astNode)) {
-        assert(!"Not implemented yet");
+        NOT_IMPLEMENTED;
+    } else if (auto astBeginExpr = std::dynamic_pointer_cast<AstBeginExpr>(astNode)) {
+        auto newSymbolTable = std::make_shared<SymbolTable>(symbolTable);
+        Value::SharedPtr lastChildProcessed;
+        for (auto child : astBeginExpr->children) {
+            lastChildProcessed = _generateSsaEq(child, simpleBlock, newSymbolTable);
+        }
+        ASSERT(lastChildProcessed);
+        return lastChildProcessed;
     } else if (auto astProcedureCall = std::dynamic_pointer_cast<AstProcedureCall>(astNode)) {
         const size_t childrenSize = astProcedureCall->children.size();
         std::vector<Value::SharedPtr> args;
         std::vector<Type> argsTypes;
         for (size_t childIdx = 0; childIdx < childrenSize; ++childIdx) {
-            auto childInst = _generateSsaEq(astProcedureCall->children[childIdx], ssaSeq);
-            assert(childInst);
+            auto childInst =
+                _generateSsaEq(astProcedureCall->children[childIdx], simpleBlock, symbolTable);
+            ASSERT(childInst);
             args.push_back(childInst);
             argsTypes.push_back(childInst->ty);
         }
-        auto procedure = ssaSeq.symbolTable->getProcedure(astProcedureCall->name, argsTypes);
+        auto procedure = symbolTable->getProcedure(astProcedureCall->name, argsTypes);
         if (!procedure) {
-            std::cerr << "Can't find procedure with name " << astProcedureCall->name
+            LOG_FATAL << "Can't find procedure with name " << astProcedureCall->name
                       << " in symbol table\n";
-            abort();
         }
-        assert(procedure);
+        ASSERT(procedure);
         auto callInst = std::make_shared<CallInst>(std::shared_ptr<Procedure>(procedure), args,
                                                    astProcedureCall->name);
-        ssaSeq.insts.push_back(callInst);
+        simpleBlock->insts.push_back(callInst);
         return callInst;
     } else if (auto astId = std::dynamic_pointer_cast<AstId>(astNode)) {
-        assert(!"Not implemented yet");
+        NOT_IMPLEMENTED;
     } else if (auto astInt = std::dynamic_pointer_cast<AstInt>(astNode)) {
         auto constInt = std::make_shared<ConstantInt>(astInt->num);
         return constInt;
@@ -80,31 +63,31 @@ static Value::SharedPtr _generateSsaEq(AstNode::SharedPtr astNode, SsaSeq &ssaSe
         auto constFloat = std::make_shared<ConstantFloat>(astFloat->num);
         return constFloat;
     }
-    assert(!"Not processed ast node");
+
+    LOG_FATAL << "Not processed AST node with type " << astNode->astNodeType;
 
     return nullptr;
 }
 
-SsaSeq generateSsaSeq(AstProgram::SharedPtr astProgram)
+SimpleBlock::SharedPtr generateIR(AstProgram::SharedPtr astProgram)
 {
-    SsaSeq ssaSeq;
-    ssaSeq.symbolTable = std::make_shared<SymbolTable>();
-    ssaSeq.symbolTable->addNewProcedure(std::make_shared<Procedure>(
+    auto mainBasicBlock = std::make_shared<SimpleBlock>();
+    auto mainSymbolTable = std::make_shared<SymbolTable>();
+    mainSymbolTable->addNewProcedure(std::make_shared<Procedure>(
         "display", std::vector<Type>{Type(Type::TypeID::UINT64)}, Type(Type::TypeID::VOID)));
-    ssaSeq.symbolTable->addNewProcedure(std::make_shared<Procedure>(
+    mainSymbolTable->addNewProcedure(std::make_shared<Procedure>(
         "+", std::vector<Type>{Type(Type::TypeID::UINT64), Type(Type::TypeID::UINT64)},
-        Type(Type::TypeID::FLOAT)));
-    ssaSeq.symbolTable->addNewProcedure(std::make_shared<Procedure>(
-        "+", std::vector<Type>{Type(Type::TypeID::UINT64), Type(Type::TypeID::FLOAT)},
-        Type(Type::TypeID::FLOAT)));
-    ssaSeq.symbolTable->addNewProcedure(std::make_shared<Procedure>(
-        "+", std::vector<Type>{Type(Type::TypeID::FLOAT), Type(Type::TypeID::UINT64)},
-        Type(Type::TypeID::FLOAT)));
-    ssaSeq.symbolTable->addNewProcedure(std::make_shared<Procedure>(
-        "+", std::vector<Type>{Type(Type::TypeID::FLOAT), Type(Type::TypeID::FLOAT)},
-        Type(Type::TypeID::FLOAT)));
+        Type(Type::TypeID::UINT64)));
+    _generateSsaEq(astProgram, mainBasicBlock, mainSymbolTable);
+    // ssaSeq.symbolTable->addNewProcedure(std::make_shared<Procedure>(
+    //     "+", std::vector<Type>{Type(Type::TypeID::UINT64), Type(Type::TypeID::FLOAT)},
+    //     Type(Type::TypeID::FLOAT)));
+    // ssaSeq.symbolTable->addNewProcedure(std::make_shared<Procedure>(
+    //     "+", std::vector<Type>{Type(Type::TypeID::FLOAT), Type(Type::TypeID::UINT64)},
+    //     Type(Type::TypeID::FLOAT)));
+    // ssaSeq.symbolTable->addNewProcedure(std::make_shared<Procedure>(
+    //     "+", std::vector<Type>{Type(Type::TypeID::FLOAT), Type(Type::TypeID::FLOAT)},
+    //     Type(Type::TypeID::FLOAT)));
 
-    _generateSsaEq(astProgram, ssaSeq);
-
-    return ssaSeq;
+    return mainBasicBlock;
 }

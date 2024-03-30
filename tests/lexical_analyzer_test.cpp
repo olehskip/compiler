@@ -513,7 +513,8 @@ protected:
         lexConstructor->addRule(ThompsonConstructor::allDigits + "+", TerminalSymbol::INT);
         lexConstructor->addRule(" ", TerminalSymbol::BLANK);
         lexConstructor->addRule("\n", TerminalSymbol::NEWLINE);
-        lexConstructor->addRule(";.*\n", TerminalSymbol::COMMENT);
+        lexConstructor->addRule(";" + ThompsonConstructor::allLettersDigitsSpace + "+\n",
+                                TerminalSymbol::COMMENT);
         lexConstructor->addRule("#\\\\" + LexicalAnalyzerConstructor::allLetters + "+",
                                 TerminalSymbol::CHARACTER);
         lexConstructor->addRule("define", TerminalSymbol::DEFINE);
@@ -558,7 +559,15 @@ TEST_F(RealTokens, CharsWitHSpaces)
 
 TEST_F(RealTokens, Comment)
 {
-    const std::string toParse = "1\n;123 asdf 1234234\n2";
+    const std::string toParse = "; 123 this is a comment 1234234\n";
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
+    ASSERT_EQ(parseRes.size(), 1);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::COMMENT);
+}
+
+TEST_F(RealTokens, CommentAmongTokens)
+{
+    const std::string toParse = "1\n; 123 this is a comment 1234234\n34";
     const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
     ASSERT_EQ(parseRes.size(), 4);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::INT);

@@ -1,16 +1,18 @@
 #include "value.hpp"
 
-std::string ConstantInt::pretty() const // override
+#include <sstream>
+
+void ConstantInt::pretty(std::stringstream &stream) const // override
 {
-    return "CONSTANT_INT " + std::to_string(val);
+    stream << "CONSTANT_INT " << val;
 }
 
-std::string ConstantFloat::pretty() const // override
+void ConstantFloat::pretty(std::stringstream &stream) const // override
 {
-    return "CONSTANT_FLOAT " + std::to_string(val);
+    stream << "CONSTANT_FLOAT " << val;
 }
 
-std::string Procedure::pretty() const // override
+void Procedure::pretty(std::stringstream &stream) const // override
 {
-    return "SOME PROCEDURE";
+    stream << "SOME PROCEDURE";
 }

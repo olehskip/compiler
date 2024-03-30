@@ -1,4 +1,5 @@
 #include "thompson_constructor.hpp"
+#include "log.hpp"
 
 #include <exception>
 #include <stack>
@@ -172,7 +173,8 @@ static MaybeSubregex processSimpleSubregex(std::string_view &ruleTail)
                    *metaSymbol == MetaRuleSymbol::DOT) {
             return Transition::ANY();
         }
-        abort(); // should never happen
+        SHOULD_NOT_HAPPEN;
+        return {};
     }());
     Subregex currSubregex{currSubregexBegin, currSubregexEnd, SubregexType::SIMPLE};
     processPossibleQuantifier(ruleTail, currSubregex);

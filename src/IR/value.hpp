@@ -1,10 +1,15 @@
 #ifndef IR_VALUE_HPP
 #define IR_VALUE_HPP
 
+#include "log.hpp"
+
 #include <memory>
-#include <unordered_map>
+#include <optional>
 #include <vector>
 
+/* It isnt' always possile to inference all the types in compile time, so Type can also indicate
+ * that it doesn't know the type, however we always know whether it is void or not
+ */
 class Type
 {
 public:
@@ -15,27 +20,50 @@ public:
         LABEL,
         VOID,
     };
-    const TypeID typeID;
-    Type(TypeID typeID_) : typeID(typeID_) {}
 
-    bool isNumber()
+    Type() {}
+    Type(TypeID typeID_)
     {
+        typeID = typeID_;
+    }
+
+    static Type createRuntimeType()
+    {
+        return Type();
+    }
+
+    bool knownInCompileTime() const
+    {
+        return typeID.has_value();
+    }
+
+    // throws assertion if typeID cannot be infered in compile time
+    TypeID getTypeID() const
+    {
+        assertKnownInCompileTime();
+        return *typeID;
+    }
+
+    bool isNumber() const
+    {
+        assertKnownInCompileTime();
         return typeID == TypeID::UINT64 || typeID == TypeID::FLOAT;
     }
-};
 
-class TypeManager
-{
-public:
-    TypeManager() {}
-
-    template <class T, std::enable_if<std::is_base_of_v<Type, T>, bool> = true>
-    std::shared_ptr<T> getType()
+    // if type is uknown in compile time it means it can't be void
+    bool isVoid() const
     {
+        return knownInCompileTime() && typeID == TypeID::VOID;
     }
 
 private:
-    std::vector<Type> types;
+    void assertKnownInCompileTime() const
+    {
+        ASSERT_MSG(knownInCompileTime(), "Type ID cannot be infered in compile time");
+    }
+
+    std::optional<TypeID> typeID =
+        std::nullopt; // typeId is nullopt means it can't be infered in compile time
 };
 
 class Value
@@ -64,20 +92,6 @@ public:
     void pretty(std::stringstream &stream) const override;
 
     const uint64_t val;
-};
-
-class Procedure : public Value
-{
-public:
-    Procedure(std::string name_, std::vector<Type> argsTypes_, Type returnType)
-        : Value(returnType), name(name_), argsTypes(argsTypes_)
-    {
-    }
-    void pretty(std::stringstream &stream) const override;
-
-    const std::string name;
-    const std::vector<Type> argsTypes;
-    using SharedPtr = std::shared_ptr<Procedure>;
 };
 
 #endif // IR_VALUE_HPP

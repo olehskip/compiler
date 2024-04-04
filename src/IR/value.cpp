@@ -11,8 +11,3 @@ void ConstantFloat::pretty(std::stringstream &stream) const // override
 {
     stream << "CONSTANT_FLOAT " << val;
 }
-
-void Procedure::pretty(std::stringstream &stream) const // override
-{
-    stream << "SOME PROCEDURE";
-}

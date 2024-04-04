@@ -1,7 +1,7 @@
 #ifndef IR_SYMBOL_TABLE_HPP
 #define IR_SYMBOL_TABLE_HPP
 
-#include "value.hpp"
+#include "procedure.hpp"
 
 #include <memory>
 

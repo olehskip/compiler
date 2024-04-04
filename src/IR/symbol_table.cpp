@@ -16,14 +16,15 @@ Procedure::SharedPtr SymbolTable::getProcedure(std::string name, std::vector<Typ
         if (procedure->argsTypes.size() != argsTypes.size()) {
             continue;
         }
-        const bool areArgsSame =
-            std::equal(procedure->argsTypes.begin(), procedure->argsTypes.end(), argsTypes.begin(),
-                       [](Type procedureArgType, Type givenArggType) {
-                           return procedureArgType.typeID == givenArggType.typeID;
-                       });
-        if (areArgsSame) {
-            return procedure;
-        }
+        // const bool areArgsSame =
+        //     std::equal(procedure->argsTypes.begin(), procedure->argsTypes.end(), argsTypes.begin(),
+        //                [](Type procedureArgType, Type givenArggType) {
+        //                    return procedureArgType.typeID == givenArggType.typeID;
+        //                });
+        // if (areArgsSame) {
+        //     return procedure;
+        // }
+        return procedure;
     }
 
     if (auto lockedParent = parent.lock()) {

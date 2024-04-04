@@ -1,4 +1,5 @@
 #include "x64_nasm_generator.hpp"
+#include "IR/procedure.hpp"
 #include "log.hpp"
 
 #include <sstream>
@@ -82,7 +83,7 @@ void generateX64Asm(SimpleBlock::SharedPtr mainSimpleBlock, std::stringstream &s
                 }
             }
             stream << "call " << asmProcedureName << "\n";
-            if (procedure->ty.typeID != Type::TypeID::VOID) {
+            if (!procedure->ty.isVoid()) {
                 stream << "push rax\n";
                 stack.allocate(callInst);
             }

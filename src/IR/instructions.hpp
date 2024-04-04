@@ -1,7 +1,7 @@
 #ifndef IR_INSTRUCTIONS_HPP
 #define IR_INSTRUCTIONS_HPP
 
-#include "value.hpp"
+#include "procedure.hpp"
 
 #include <string>
 #include <vector>

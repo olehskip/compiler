@@ -7,79 +7,105 @@
 #include <optional>
 #include <vector>
 
-/* It isnt' always possile to inference all the types in compile time, so Type can also indicate
- * that it doesn't know the type, however we always know whether it is void or not
+class CompileTimeKnownType;
+enum class TypeID
+{
+    UINT64,
+    FLOAT,
+    LABEL,
+    VOID,
+    PROCEDURE,
+};
+
+/* It isn't always possile to inference all the types in compile time, so Type can also store a type
+ * that is to be deduced in runtime
  */
 class Type
 {
 public:
-    enum class TypeID
-    {
-        UINT64,
-        FLOAT,
-        LABEL,
-        VOID,
-    };
+    virtual ~Type(){};
+    virtual bool knownInCompileTime() const = 0;
+    using SharedPtr = std::shared_ptr<Type>;
 
+    // we can always tell if a type is void, because
+    // type is never void if it cannot be deduced in compile time
+    virtual bool isVoid() const = 0;
+
+protected:
     Type() {}
-    Type(TypeID typeID_)
+};
+
+class CompileTimeKnownType : public Type
+{
+public:
+    using SharedPtr = std::shared_ptr<Type>;
+
+    CompileTimeKnownType(TypeID typeID_)
     {
         typeID = typeID_;
     }
+    ~CompileTimeKnownType() override {}
 
-    static Type createRuntimeType()
+    static SharedPtr getNew(TypeID typeID_)
     {
-        return Type();
+        return std::make_shared<CompileTimeKnownType>(typeID_);
     }
 
-    bool knownInCompileTime() const
+    bool knownInCompileTime() const override
     {
-        return typeID.has_value();
+        return true;
     }
 
-    // throws assertion if typeID cannot be infered in compile time
     TypeID getTypeID() const
     {
-        assertKnownInCompileTime();
-        return *typeID;
+        return typeID;
     }
 
     bool isNumber() const
     {
-        assertKnownInCompileTime();
         return typeID == TypeID::UINT64 || typeID == TypeID::FLOAT;
     }
 
-    // if type is uknown in compile time it means it can't be void
-    bool isVoid() const
+    bool isVoid() const override
     {
-        return knownInCompileTime() && typeID == TypeID::VOID;
+        return typeID == TypeID::VOID;
     }
 
 private:
-    void assertKnownInCompileTime() const
+    TypeID typeID;
+};
+
+class RunTimeKnownType : public Type
+{
+public:
+    RunTimeKnownType() {}
+    ~RunTimeKnownType() override {}
+
+    bool knownInCompileTime() const override
     {
-        ASSERT_MSG(knownInCompileTime(), "Type ID cannot be infered in compile time");
+        return false;
     }
 
-    std::optional<TypeID> typeID =
-        std::nullopt; // typeId is nullopt means it can't be infered in compile time
+    bool isVoid() const override
+    {
+        return false;
+    }
 };
 
 class Value
 {
 public:
-    Value(Type ty_) : ty(ty_) {}
+    Value(Type::SharedPtr ty_) : ty(ty_) {}
     virtual ~Value() {}
     virtual void pretty(std::stringstream &stream) const = 0;
-    const Type ty;
+    const Type::SharedPtr ty;
     using SharedPtr = std::shared_ptr<Value>;
 };
 
 class ConstantInt : public Value
 {
 public:
-    ConstantInt(uint64_t val_) : Value(Type::TypeID::UINT64), val(val_) {}
+    ConstantInt(uint64_t val_) : Value(CompileTimeKnownType::getNew(TypeID::UINT64)), val(val_) {}
     void pretty(std::stringstream &stream) const override;
 
     const uint64_t val;
@@ -88,7 +114,7 @@ public:
 class ConstantFloat : public Value
 {
 public:
-    ConstantFloat(uint64_t val_) : Value(Type::TypeID::FLOAT), val(val_) {}
+    ConstantFloat(uint64_t val_) : Value(CompileTimeKnownType::getNew(TypeID::FLOAT)), val(val_) {}
     void pretty(std::stringstream &stream) const override;
 
     const uint64_t val;

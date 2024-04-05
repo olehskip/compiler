@@ -58,7 +58,7 @@ void generateX64Asm(SimpleBlock::SharedPtr mainSimpleBlock, std::stringstream &s
     stream << "mov rbp, rsp\n";
     for (auto inst : mainSimpleBlock->insts) {
         if (auto callInst = std::dynamic_pointer_cast<CallInst>(inst)) {
-            std::vector<Type> argsTypes;
+            std::vector<Type::SharedPtr> argsTypes;
             for (auto arg : callInst->args) {
                 argsTypes.push_back(arg->ty);
             }
@@ -83,7 +83,7 @@ void generateX64Asm(SimpleBlock::SharedPtr mainSimpleBlock, std::stringstream &s
                 }
             }
             stream << "call " << asmProcedureName << "\n";
-            if (!procedure->ty.isVoid()) {
+            if (!procedure->ty->isVoid()) {
                 stream << "push rax\n";
                 stack.allocate(callInst);
             }

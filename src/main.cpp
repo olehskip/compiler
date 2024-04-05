@@ -96,7 +96,6 @@ int main(int argc, char *argv[])
     syntaxAnalyzer.addRules(NonTerminalSymbol::START,
                             {{NonTerminalSymbol::PROCEDURE_DEF}, {NonTerminalSymbol::EXPR}});
 
-    // TODO: maybe move BEGIN_EXPR under EXPR?
     syntaxAnalyzer.addRules(
         NonTerminalSymbol::EXPRS,
         {{NonTerminalSymbol::EXPRS, NonTerminalSymbol::EXPR}, {NonTerminalSymbol::EXPR}});

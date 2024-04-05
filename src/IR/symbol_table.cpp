@@ -8,7 +8,8 @@ void SymbolTable::addNewProcedure(Procedure::SharedPtr procedure)
     proceduresTable[procedure->name].push_back(procedure);
 }
 
-Procedure::SharedPtr SymbolTable::getProcedure(std::string name, std::vector<Type> argsTypes)
+Procedure::SharedPtr
+SymbolTable::getProcedure(std::string name, std::vector<CompileTimeKnownType::SharedPtr> argsTypes)
 {
     auto vec = proceduresTable[name];
     for (auto procedure : vec) {
@@ -17,7 +18,8 @@ Procedure::SharedPtr SymbolTable::getProcedure(std::string name, std::vector<Typ
             continue;
         }
         // const bool areArgsSame =
-        //     std::equal(procedure->argsTypes.begin(), procedure->argsTypes.end(), argsTypes.begin(),
+        //     std::equal(procedure->argsTypes.begin(), procedure->argsTypes.end(),
+        //     argsTypes.begin(),
         //                [](Type procedureArgType, Type givenArggType) {
         //                    return procedureArgType.typeID == givenArggType.typeID;
         //                });

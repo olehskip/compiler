@@ -1,6 +1,8 @@
 (begin
-    (display (+ 1 2)) ; should print
+    (display (+ 1 2)) ; should print 3
+    (display "\n") ; should print newline
     (display 4) ; should print 4
+    (display "\n") ; should print newline
 ) ; should return void
 
 (display
@@ -10,9 +12,14 @@
     ) ; should return 15
 ) ; should print 15
 
+(display "\n")
+
 (display
     (begin
         (display 9) ; should print 9
+        (display "\n") ; should print newline
         (+ 9 0) ; should print 9
     ) ; should return 9
 ) ; should print 9
+
+(display "\n") ; should print newline

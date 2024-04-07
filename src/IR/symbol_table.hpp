@@ -20,10 +20,11 @@ public:
     using SharedPtr = std::shared_ptr<SymbolTable>;
     SymbolTable(std::weak_ptr<SymbolTable> parent_ = std::weak_ptr<SymbolTable>());
 
-    // procedures same name but with different types may exist
-    void addNewProcedure(Procedure::SharedPtr procedure);
-    Procedure::SharedPtr getProcedure(std::string name,
-                                      std::vector<CompileTimeKnownType::SharedPtr> argsTypes);
+    void addGeneralProcedure(GeneralProcedure::SharedPtr procedure);
+    GeneralProcedure::SharedPtr getGeneralProcedure(std::string name);
+
+    void addSpecificProcedure(SpecificProcedure::SharedPtr procedure);
+    SpecificProcedure::SharedPtr getSpecificProcedure(std::string name, CompileTimeTypes types);
 
     // if a variable with such name already exists, it gets overwritten
     void addNewVar(std::string name, Value::SharedPtr varValue);
@@ -32,7 +33,9 @@ public:
     Value::SharedPtr getVar(std::string name);
 
 private:
-    std::unordered_map<std::string, std::vector<Procedure::SharedPtr>> proceduresTable;
+    std::unordered_map<std::string, GeneralProcedure::SharedPtr> generalProceduresTable;
+    std::unordered_map<std::string, std::vector<SpecificProcedure::SharedPtr>>
+        specificProceduresTable;
     std::unordered_map<std::string, Value::SharedPtr> varsTable;
     std::weak_ptr<SymbolTable> parent;
 };

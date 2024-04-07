@@ -38,8 +38,7 @@ class StoreInst : public Instruction
 {
 public:
     StoreInst(Value::SharedPtr dst_, Value::SharedPtr src_)
-        : Instruction(InstType::STORE, CompileTimeKnownType::getNew(TypeID::VOID)), dst(dst_),
-          src(src_)
+        : Instruction(InstType::STORE, CompileTimeType::getNew(TypeID::VOID)), dst(dst_), src(src_)
     {
     }
 
@@ -61,18 +60,15 @@ private:
 class CallInst : public Instruction
 {
 public:
-    CallInst(Procedure::SharedPtr procedure_, std::vector<Value::SharedPtr> args_,
-             std::string procedureName_)
-        : Instruction(InstType::CALL, procedure_->ty), procedure(procedure_), args(args_),
-          procedureName(procedureName_)
+    CallInst(Procedure::SharedPtr procedure_, std::vector<Value::SharedPtr> args_)
+        : Instruction(InstType::CALL, procedure_->returnType), procedure(procedure_), args(args_)
     {
     }
 
     void pretty(std::stringstream &stream) const override;
 
-    Procedure::SharedPtr procedure;
-    std::vector<Value::SharedPtr> args;
-    std::string procedureName;
+    const Procedure::SharedPtr procedure;
+    const std::vector<Value::SharedPtr> args;
 };
 
 #endif // IR_INSTRUCTIONS_HPP

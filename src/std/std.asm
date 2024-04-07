@@ -5,15 +5,16 @@ section .bss
 
 section .text
 
-global display_int
-global plus_int
+global displayINT64
+global displaySTRING
+global plusINT64
 
-plus_int:
+plusINT64:
     mov rax, rdi
     add rax, rsi
     ret
     
-display_int:
+displayINT64:
     push rbp
     mov rbp, rsp
 
@@ -48,12 +49,12 @@ display_int:
     mov byte [r9], '-'
 
 .write:
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, r9
+    mov rax, 1 ; syscall=write
+    mov rdi, 1 ; stdout
+    mov rsi, r9 ; text
     imul r9, -1
     lea r9, [display_buffer + DISPLAY_BUFFER_LEN + r9 + 1]
-    mov rdx, r9
+    mov rdx, r9 ; length
     syscall
 
     pop r10
@@ -65,3 +66,33 @@ display_int:
     mov rsp, rbp
     pop rbp
     ret
+
+; expects pointer to string
+; TODO: I don't like that we count bytes even if we know the length in advance
+displaySTRING:
+    push rbp
+    mov rbp, rsp
+
+    push r9
+    mov r9, 0
+.loop:
+    cmp BYTE [rdi + r9], 0
+    je .write
+    inc r9
+    jmp .loop
+
+.write:
+    mov rax, 1 ; syscall=write
+    mov rsi, rdi ; text 
+    mov rdi, 1 ; stdout
+    mov rdx, r9 ; length
+    syscall
+
+    pop r9
+
+    mov rax, 0
+
+    mov rsp, rbp
+    pop rbp
+    ret
+    

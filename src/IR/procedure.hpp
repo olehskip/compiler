@@ -16,14 +16,16 @@
  *  func f(a, b) => return standard_procedure(a, b)
  * Here we call some standard procedure, but we can't know the arguments' types in compile time. To
  * solve this we use a dispatcher, which in runtime checks the arguments' types and returns the
- * needed SpecificProcedure from STD.
+ * needed SpecificProcedure from STD. GeneralProcedure and SpecificProcedure should have different
+ * names to avoid ambiguity
  *
  * The flow to determine the needed procedure:
- * 1) If all the arguments have compile time known types, then we try to find a "specific" procedure
- *  with such parameters' types, if we failed then we try find a "general" procedure,
+ * 1) If all the arguments have compile time known types, then we try to find a SpecificProcecure
+ *  with the given parameters' types, if we failed then we try find a GeneralProcedure,
  *  which doesn't care about arguments types
- * 2) If at least one of the arguments has a runtime known type, then we check whether there is a
- *  potential dispatcher, if yes we use to determine the needed procedure in runtime
+ * 2) If at least one of the arguments has a runtime known type, then we search for
+ *  GeneraelProcedure with the same name, if we fail then we check whether there is a potential
+ *  Dispatcher, if yes we use it to determine the needed SpecificProcedure in runtime
  *
  * Dispatcher determines the arguments' types and dispatches a procedure call to the correct
  * SpecificProcedure, this takes place in runtime. It is kind of a symbol table entry, that works in
@@ -39,42 +41,84 @@
 class Procedure : public Value
 {
 public:
-    Procedure(std::string name_)
-        : Value(CompileTimeKnownType::getNew(TypeID::PROCEDURE)), name(name_)
+    using SharedPtr = std::shared_ptr<Procedure>;
+    virtual ~Procedure(){};
+    const std::string name;
+    const std::string mangledName;
+    const std::vector<Type::SharedPtr> argsTypes;
+    const Type::SharedPtr returnType;
+
+protected:
+    Procedure(std::string name_, std::vector<Type::SharedPtr> argsTypes_,
+              Type::SharedPtr returnType_)
+        : Value(CompileTimeType::getNew(TypeID::PROCEDURE)), name(name_),
+          mangledName(mangleName(name, argsTypes_)), argsTypes(argsTypes_), returnType(returnType_)
     {
     }
-    virtual ~Procedure() = 0;
+    Procedure(std::string name_, std::string mangledName_, std::vector<Type::SharedPtr> argsTypes_,
+              Type::SharedPtr returnType_)
+        : Value(CompileTimeType::getNew(TypeID::PROCEDURE)), name(name_), mangledName(mangledName_),
+          argsTypes(argsTypes_), returnType(returnType_)
+    {
+    }
 
-    const std::string name;
-    // const std::vector<Type::UniquePtr> argsTypes;
-    using SharedPtr = std::shared_ptr<Procedure>;
+private:
+    static std::string mangleName(const std::string &nameToMangle,
+                                  const std::vector<Type::SharedPtr> argsTypes)
+    {
+        std::string ret = nameToMangle;
+        for (auto argType : argsTypes) {
+            if (argType->knownInCompileTime()) {
+                auto typeID = std::dynamic_pointer_cast<CompileTimeType>(argType)->typeID;
+                ret += typeIdToString(typeID);
+            } else {
+                ret += "UnknownType";
+            }
+        }
+        return ret;
+    }
 };
 
-class GeneralProcedure : public Value
+class GeneralProcedure : public Procedure
 {
-    Procedure(std::string name_, std::vector<CompileTimeKnownType::SharedPtr> argsTypes_,
-              Type::SharedPtr returnType)
-        : Value(returnType), name(name_), argsTypes(argsTypes_)
+public:
+    using SharedPtr = std::shared_ptr<GeneralProcedure>;
+    GeneralProcedure(std::string name_, std::vector<RunTimeType::SharedPtr> argsTypes_,
+                     RunTimeType::SharedPtr returnType_)
+        : Procedure(name_, toTypes(argsTypes_), returnType_)
     {
     }
-    const std::vector<CompileTimeKnownType::SharedPtr> argsTypes = {};
+    ~GeneralProcedure() override {}
+
+    void pretty(std::stringstream &stream) const override
+    {
+        (void)stream;
+        NOT_IMPLEMENTED;
+    }
 };
 
 class SpecificProcedure : public Procedure
 {
 public:
     using SharedPtr = std::shared_ptr<SpecificProcedure>;
-};
-
-class SpecificProcedureMangled : public SpecificProcedure
-{
-public:
-    SpecificProcedureMangled(std::string mangledName_, const SpecificProcedure &specificProcedure)
-        : SpecificProcedure(specificProcedure), mangledName(mangledName_)
+    SpecificProcedure(std::string name_, std::vector<CompileTimeType::SharedPtr> argsTypes_,
+                      CompileTimeType::SharedPtr returnType_)
+        : Procedure(name_, toTypes(argsTypes_), returnType_)
     {
     }
-    using SharedPtr = std::shared_ptr<SpecificProcedure>;
-    const std::string mangledName;
+    SpecificProcedure(std::string name_, std::string mangledName_,
+                      std::vector<CompileTimeType::SharedPtr> argsTypes_,
+                      CompileTimeType::SharedPtr returnType_)
+        : Procedure(name_, mangledName_, toTypes(argsTypes_), returnType_)
+    {
+    }
+    ~SpecificProcedure() override {}
+
+    void pretty(std::stringstream &stream) const override
+    {
+        (void)stream;
+        NOT_IMPLEMENTED;
+    }
 };
 
 class ProcedureDispatcher : public Value
@@ -82,24 +126,13 @@ class ProcedureDispatcher : public Value
 public:
     ProcedureDispatcher(std::string name_,
                         std::vector<SpecificProcedure::SharedPtr> specificProcedures_)
-        : Value(CompileTimeKnownType::getNew(TypeID::LABEL)), name(name_)
+        : Value(CompileTimeType::getNew(TypeID::LABEL)), name(name_),
+          specificProcedures(specificProcedures_)
     {
-        for (auto specificProcedure : specificProcedures_) {
-            ASSERT(specificProcedure->name == name);
-            // specificProcedures.emplace_back(mangleName(name, specificProcedure->argsTypes),
-            // *specificProcedure);
-        }
     }
 
     const std::string name;
-    std::vector<SpecificProcedureMangled::SharedPtr> specificProcedures;
-
-private:
-    static std::string mangleName(const std::string &name,
-                                  std::vector<CompileTimeKnownType::SharedPtr> types)
-    {
-        return name;
-    }
+    const std::vector<SpecificProcedure::SharedPtr> specificProcedures;
 };
 
 #endif // IR_PROCEDURE_HPP

@@ -12,12 +12,6 @@ void SimpleBlock::pretty(std::stringstream &stream) const // override
     }
 }
 
-static bool containsRunTimeKnownType(const std::vector<Type::SharedPtr> &types)
-{
-    return std::any_of(types.begin(), types.end(),
-                       [](Type::SharedPtr ty) { return !ty->knownInCompileTime(); });
-}
-
 static Value::SharedPtr _generateSsaEq(AstNode::SharedPtr astNode,
                                        SimpleBlock::SharedPtr simpleBlock,
                                        SymbolTable::SharedPtr symbolTable)
@@ -52,16 +46,21 @@ static Value::SharedPtr _generateSsaEq(AstNode::SharedPtr astNode,
             argsTypes.push_back(childInst->ty);
         }
 
-        if (!containsRunTimeKnownType(argsTypes)) {
-            auto procedure = symbolTable->getProcedure(astProcedureCall->name, argsTypes);
-            if (procedure) {
-                auto callInst = std::make_shared<CallInst>(std::shared_ptr<Procedure>(procedure),
-                                                           args, astProcedureCall->name);
+        // check out the comments in IR/procedure.hpp to understand the flow
+
+        if (!containsRunTimeType(argsTypes)) {
+            auto compileTimeArgsTypes = toCompileTimeTypes(argsTypes);
+            auto specificProcedure =
+                symbolTable->getSpecificProcedure(astProcedureCall->name, compileTimeArgsTypes);
+            if (specificProcedure) {
+                auto callInst = std::make_shared<CallInst>(specificProcedure, args);
                 simpleBlock->insts.push_back(callInst);
                 return callInst;
+            } else {
+                LOG_WARNING << astProcedureCall->name;
             }
         }
-
+        NOT_IMPLEMENTED;
     } else if (auto astVarDef = std::dynamic_pointer_cast<AstVarDef>(astNode)) {
         auto varExprProcessed = _generateSsaEq(astVarDef->expr, simpleBlock, symbolTable);
         ASSERT(varExprProcessed);
@@ -73,11 +72,11 @@ static Value::SharedPtr _generateSsaEq(AstNode::SharedPtr astNode,
         ASSERT_MSG(var, "Can't find variable with name = " << astId->name);
         return var;
     } else if (auto astInt = std::dynamic_pointer_cast<AstInt>(astNode)) {
-        auto constInt = std::make_shared<ConstantInt>(astInt->num);
-        return constInt;
+        return std::make_shared<ConstantInt>(astInt->num);
     } else if (auto astFloat = std::dynamic_pointer_cast<AstFloat>(astNode)) {
-        auto constFloat = std::make_shared<ConstantFloat>(astFloat->num);
-        return constFloat;
+        return std::make_shared<ConstantFloat>(astFloat->num);
+    } else if (auto astString = std::dynamic_pointer_cast<AstString>(astNode)) {
+        return std::make_shared<ConstantString>(astString->str);
     }
 
     LOG_FATAL << "Not processed AST node with type " << astNode->astNodeType;
@@ -89,15 +88,19 @@ SimpleBlock::SharedPtr generateIR(AstProgram::SharedPtr astProgram)
 {
     auto mainBasicBlock = std::make_shared<SimpleBlock>();
     auto mainSymbolTable = std::make_shared<SymbolTable>();
-    mainSymbolTable->addNewProcedure(std::make_shared<Procedure>(
-        "display",
-        std::vector<CompileTimeKnownType::SharedPtr>{CompileTimeKnownType::getNew(TypeID::UINT64)},
-        CompileTimeKnownType::getNew(TypeID::VOID)));
-    mainSymbolTable->addNewProcedure(std::make_shared<Procedure>(
-        "+",
-        std::vector<CompileTimeKnownType::SharedPtr>{CompileTimeKnownType::getNew(TypeID::UINT64),
-                                                     CompileTimeKnownType::getNew(TypeID::UINT64)},
-        CompileTimeKnownType::getNew(TypeID::UINT64)));
+    mainSymbolTable->addSpecificProcedure(std::make_shared<SpecificProcedure>(
+        "display", "displayINT64",
+        std::vector<CompileTimeType::SharedPtr>{CompileTimeType::getNew(TypeID::INT64)},
+        CompileTimeType::getNew(TypeID::VOID)));
+    mainSymbolTable->addSpecificProcedure(std::make_shared<SpecificProcedure>(
+        "display", "displaySTRING",
+        std::vector<CompileTimeType::SharedPtr>{CompileTimeType::getNew(TypeID::STRING)},
+        CompileTimeType::getNew(TypeID::VOID)));
+    mainSymbolTable->addSpecificProcedure(std::make_shared<SpecificProcedure>(
+        "+", "plusINT64",
+        std::vector<CompileTimeType::SharedPtr>{CompileTimeType::getNew(TypeID::INT64),
+                                                CompileTimeType::getNew(TypeID::INT64)},
+        CompileTimeType::getNew(TypeID::INT64)));
     _generateSsaEq(astProgram, mainBasicBlock, mainSymbolTable);
     // ssaSeq.symbolTable->addNewProcedure(std::make_shared<Procedure>(
     //     "+", std::vector<Type>{Type(Type::TypeID::UINT64), Type(Type::TypeID::FLOAT)},

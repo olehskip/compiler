@@ -3,37 +3,61 @@
 
 SymbolTable::SymbolTable(std::weak_ptr<SymbolTable> parent_) : parent(parent_) {}
 
-void SymbolTable::addNewProcedure(Procedure::SharedPtr procedure)
+void SymbolTable::addGeneralProcedure(GeneralProcedure::SharedPtr procedure)
 {
-    proceduresTable[procedure->name].push_back(procedure);
+    // TODO: add checking in parent symbol tables as well
+    ASSERT_MSG(!specificProceduresTable.contains(procedure->name),
+               "Can't add GeneralProcedure with name = "
+                   << procedure->name
+                   << " because SpecificProcedure with the same name already exists");
+    ASSERT_MSG(!generalProceduresTable.contains(procedure->name),
+               "GeneralProcedure with name = " << procedure->name << " already exists");
+    generalProceduresTable.insert({procedure->name, procedure});
 }
 
-Procedure::SharedPtr
-SymbolTable::getProcedure(std::string name, std::vector<CompileTimeKnownType::SharedPtr> argsTypes)
+GeneralProcedure::SharedPtr SymbolTable::getGeneralProcedure(std::string name)
 {
-    auto vec = proceduresTable[name];
-    for (auto procedure : vec) {
-        ASSERT(procedure);
-        if (procedure->argsTypes.size() != argsTypes.size()) {
-            continue;
-        }
-        // const bool areArgsSame =
-        //     std::equal(procedure->argsTypes.begin(), procedure->argsTypes.end(),
-        //     argsTypes.begin(),
-        //                [](Type procedureArgType, Type givenArggType) {
-        //                    return procedureArgType.typeID == givenArggType.typeID;
-        //                });
-        // if (areArgsSame) {
-        //     return procedure;
-        // }
-        return procedure;
+    auto procedureIt = generalProceduresTable.find(name);
+    if (procedureIt != generalProceduresTable.end()) {
+        return procedureIt->second;
     }
-
     if (auto lockedParent = parent.lock()) {
-        return lockedParent->getProcedure(name, argsTypes);
+        return lockedParent->getGeneralProcedure(name);
     }
     return nullptr;
 }
+
+void SymbolTable::addSpecificProcedure(SpecificProcedure::SharedPtr procedure)
+{
+    // TODO: add checking in parent symbol tables as well
+    ASSERT_MSG(!generalProceduresTable.contains(procedure->name),
+               "Can't add Specificprocedure with name = "
+                   << procedure->name
+                   << " because GeneralProcedure with the same name already exists");
+    specificProceduresTable[procedure->name].push_back(procedure);
+}
+
+SpecificProcedure::SharedPtr SymbolTable::getSpecificProcedure(std::string name,
+                                                               CompileTimeTypes types)
+{
+    auto procedureIt = specificProceduresTable.find(name);
+    if (procedureIt != specificProceduresTable.end()) {
+        for (auto procedureCandidate : procedureIt->second) {
+            const auto typesEqual =
+                std::equal(types.begin(), types.end(),
+                           toCompileTimeTypes(procedureCandidate->argsTypes).begin(),
+                           [](auto typeA, auto typeB) { return typeA->typeID == typeB->typeID; });
+            if (typesEqual) {
+                return procedureCandidate;
+            }
+        }
+    }
+    if (auto lockedParent = parent.lock()) {
+        return lockedParent->getSpecificProcedure(name, types);
+    }
+    return nullptr;
+}
+
 void SymbolTable::addNewVar(std::string name, Value::SharedPtr varValue)
 {
     varsTable[name] = varValue;

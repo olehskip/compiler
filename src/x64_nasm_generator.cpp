@@ -4,7 +4,7 @@
 
 #include <sstream>
 
-class Stack
+class StackAllocator
 {
 public:
     StackRegister allocate(Value::SharedPtr value)
@@ -32,6 +32,49 @@ private:
     uint64_t currentOffset = 0;
 };
 
+class RodataAllocator
+{
+public:
+    RoDataRegister allocate(Value::SharedPtr value)
+    {
+        const RoDataRegister ret(currentIdx++);
+        const bool wasInserted = container.insert({value, ret}).second;
+        ASSERT(wasInserted);
+        return ret;
+    }
+
+    RoDataRegister get(Value::SharedPtr value)
+    {
+        ASSERT(container.contains(value));
+        return container.at(value);
+    }
+
+    RoDataRegister getOrAllocate(Value::SharedPtr value)
+    {
+        const auto it = container.find(value);
+        if (it != container.end()) {
+            return it->second;
+        }
+        return allocate(value);
+    }
+
+private:
+    std::unordered_map<Value::SharedPtr, RoDataRegister> container;
+    uint64_t currentIdx = 0;
+
+    using ContainerIterator = decltype(std::begin(container));
+
+public:
+    ContainerIterator begin()
+    {
+        return container.begin();
+    }
+    ContainerIterator end()
+    {
+        return container.end();
+    }
+};
+
 static std::string getParamRegisterName(unsigned long long paramIdx)
 {
     switch (paramIdx) {
@@ -48,14 +91,20 @@ static std::string getParamRegisterName(unsigned long long paramIdx)
 void generateX64Asm(SimpleBlock::SharedPtr mainSimpleBlock, std::stringstream &stream)
 {
     ASSERT(mainSimpleBlock);
-    Stack stack;
+    StackAllocator stack;
+    RodataAllocator rodata;
 
-    stream << "extern display_int\n";
-    stream << "extern plus_int\n";
-    stream << "section .text\n";
-    stream << "global _start\n";
-    stream << "_start:\n";
-    stream << "mov rbp, rsp\n";
+    std::stringstream header;
+    // TODO: make it automatically
+    header << "extern plusINT64\n";
+    header << "extern displayINT64\n";
+    header << "extern displaySTRING\n";
+    header << "global _start\n";
+
+    std::stringstream body;
+    body << "section .text\n";
+    body << "_start:\n";
+    body << "mov rbp, rsp\n";
     for (auto inst : mainSimpleBlock->insts) {
         if (auto callInst = std::dynamic_pointer_cast<CallInst>(inst)) {
             std::vector<Type::SharedPtr> argsTypes;
@@ -64,27 +113,25 @@ void generateX64Asm(SimpleBlock::SharedPtr mainSimpleBlock, std::stringstream &s
             }
             auto procedure = callInst->procedure;
             ASSERT(procedure);
-            std::string asmProcedureName;
-            if (callInst->procedureName == "+") {
-                asmProcedureName = "plus_int";
-            } else if (callInst->procedureName == "display") {
-                asmProcedureName = "display_int";
-            }
-            ASSERT(asmProcedureName.size());
             for (size_t argIdx = 0; argIdx < callInst->args.size(); ++argIdx) {
                 auto arg = callInst->args[argIdx];
                 if (auto constIntArg = std::dynamic_pointer_cast<ConstantInt>(arg)) {
-                    stream << "mov " << getParamRegisterName(argIdx) << ", " << constIntArg->val
-                           << "\n";
+                    body << "mov " << getParamRegisterName(argIdx) << ", " << constIntArg->val
+                         << "\n";
+                } else if (auto constStringArg = std::dynamic_pointer_cast<ConstantString>(arg)) {
+                    auto registerVal =
+                        rodata.getOrAllocate(constStringArg);
+                    body << "mov " << getParamRegisterName(argIdx) << ", " << registerVal.getPtr()
+                         << "\n";
                 } else {
                     auto registerVal = stack.getStackRegister(arg);
-                    stream << "mov " << getParamRegisterName(argIdx) << ", "
-                           << registerVal.getData() << "\n";
+                    body << "mov " << getParamRegisterName(argIdx) << ", " << registerVal.getData()
+                         << "\n";
                 }
             }
-            stream << "call " << asmProcedureName << "\n";
-            if (!procedure->ty->isVoid()) {
-                stream << "push rax\n";
+            body << "call " << callInst->procedure->mangledName << "\n";
+            if (!procedure->returnType->isVoid()) {
+                body << "push rax\n";
                 stack.allocate(callInst);
             }
         } else {
@@ -92,7 +139,18 @@ void generateX64Asm(SimpleBlock::SharedPtr mainSimpleBlock, std::stringstream &s
         }
     }
 
-    stream << "mov rax, 60\n";
-    stream << "mov rdi, 0\n";
-    stream << "syscall\n";
+    header << "section .rodata\n";
+    for (const auto &allocation : rodata) {
+        auto constStringArg = std::dynamic_pointer_cast<ConstantString>(allocation.first);
+        ASSERT_MSG(constStringArg, "Only string can appear in rodata so far");
+        // `` is used so \n works
+        header << allocation.second.name + " db " + "`" + constStringArg->str + "`,0\n";
+    }
+
+    std::stringstream end;
+    end << "mov rax, 60\n";
+    end << "mov rdi, 0\n";
+    end << "syscall\n";
+
+    stream << header.str() << body.str() << end.str();
 }

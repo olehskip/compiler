@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 
     std::shared_ptr<ThompsonConstructor> thompsonConstructor =
         std::make_shared<ThompsonConstructor>();
-    thompsonConstructor->addRule(";" + thompsonConstructor->allLettersDigitsSpace + "*\n",
+    thompsonConstructor->addRule(";" + thompsonConstructor->everything + "*\n",
                                  TerminalSymbol::COMMENT);
     thompsonConstructor->addRule("#[tT]", TerminalSymbol::TRUE_LIT);
     thompsonConstructor->addRule("#[fF]", TerminalSymbol::FALSE_LIT);
@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
     thompsonConstructor->addRule("\\)", TerminalSymbol::CLOSED_BRACKET);
     thompsonConstructor->addRule("#\\\\" + ThompsonConstructor::allLetters,
                                  TerminalSymbol::CHARACTER);
-    thompsonConstructor->addRule("\"" + LexicalAnalyzerConstructor::allLettersDigits + "+\"",
+    thompsonConstructor->addRule("\"" + LexicalAnalyzerConstructor::everything + "+\"",
                                  TerminalSymbol::STRING);
     thompsonConstructor->addRule("'" + LexicalAnalyzerConstructor::allLettersDigits + "+",
                                  TerminalSymbol::SYMBOL);
@@ -96,7 +96,6 @@ int main(int argc, char *argv[])
     syntaxAnalyzer.addRules(NonTerminalSymbol::START,
                             {{NonTerminalSymbol::PROCEDURE_DEF}, {NonTerminalSymbol::EXPR}});
 
-    // TODO: maybe move BEGIN_EXPR under EXPR?
     syntaxAnalyzer.addRules(
         NonTerminalSymbol::EXPRS,
         {{NonTerminalSymbol::EXPRS, NonTerminalSymbol::EXPR}, {NonTerminalSymbol::EXPR}});
@@ -170,6 +169,5 @@ int main(int argc, char *argv[])
     generateX64Asm(ssaSeq, nasm);
     saveNasm(nasm, outputPath + "/output.nasm");
     std::cout << "Nasm code was saved\n";
-
     return 0;
 }

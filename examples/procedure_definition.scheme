@@ -1,0 +1,2 @@
+(define (add2int a b) (+ a b))
+(display (add2int 1 2))

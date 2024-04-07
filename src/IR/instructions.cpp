@@ -4,7 +4,7 @@
 
 void CallInst::pretty(std::stringstream &stream) const // override
 {
-    stream << "call \"" << procedureName << "\" (";
+    stream << "call \"" << procedure->name << "\" (";
     for (auto argIt = args.begin(); argIt != args.end(); ++argIt) {
         if (argIt != args.begin()) {
             stream << ", ";

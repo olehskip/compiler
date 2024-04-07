@@ -139,9 +139,10 @@ static std::vector<AstNode::SharedPtr> processGeneral(SymbolSt::SharedPtr node)
         if (terminalSt->symbolType == TerminalSymbol::ID) {
             return {std::make_shared<AstId>(terminalSt->text)};
         } else if (terminalSt->symbolType == TerminalSymbol::INT) {
-            auto ret = std::make_shared<AstInt>();
-            ret->num = std::stoi(terminalSt->text);
-            return {ret};
+            return {std::make_shared<AstInt>(std::stoi(terminalSt->text))};
+        } else if (terminalSt->symbolType == TerminalSymbol::STRING) {
+            return {std::make_shared<AstString>(
+                terminalSt->text.substr(1, terminalSt->text.size() - 2))}; // remove quotes
         } else {
             LOG_FATAL << "terminal " + getSymbolName(terminalSt->symbolType) + " not implemented";
         }
@@ -295,6 +296,8 @@ void prettyAst(AstNode::SharedPtr astNode, std::stringstream &stream)
         stream << '"' << "[INT] " << id << " " << astInt->num << '"' << "\n";
     } else if (auto astFloat = std::dynamic_pointer_cast<AstFloat>(astNode)) {
         stream << '"' << "[FLOAT] " << id << " " << astFloat->num << '"' << "\n";
+    } else if (auto astString = std::dynamic_pointer_cast<AstString>(astNode)) {
+        stream << '"' << "[STRING] " << id << " " << astString->str << '"' << "\n";
     } else {
         LOG_FATAL << "not processed AST node with type " << astNode->astNodeType;
     }

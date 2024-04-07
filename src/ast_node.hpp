@@ -15,7 +15,8 @@ enum class AstNodeType
     VAR_DEF,
     ID,
     INT,
-    FLOAT
+    FLOAT,
+    STRING
 };
 
 class AstNode
@@ -57,26 +58,35 @@ class AstId : public AstNode
 public:
     AstId(std::string name_) : AstNode(AstNodeType::ID), name(name_) {}
 
-    std::string name;
+    const std::string name;
     using SharedPtr = std::shared_ptr<AstId>;
 };
 
 class AstInt : public AstNode
 {
 public:
-    AstInt() : AstNode(AstNodeType::INT) {}
+    AstInt(int64_t num_) : AstNode(AstNodeType::INT), num(num_) {}
 
-    int64_t num;
+    const int64_t num;
     using SharedPtr = std::shared_ptr<AstInt>;
 };
 
 class AstFloat : public AstNode
 {
 public:
-    AstFloat() : AstNode(AstNodeType::FLOAT) {}
+    AstFloat(long double num_) : AstNode(AstNodeType::FLOAT), num(num_) {}
 
-    long double num;
+    const long double num;
     using SharedPtr = std::shared_ptr<AstFloat>;
+};
+
+class AstString : public AstNode
+{
+public:
+    AstString(std::string str_) : AstNode(AstNodeType::STRING), str(str_) {}
+
+    const std::string str;
+    using SharedPtr = std::shared_ptr<AstString>;
 };
 
 class AstProcedureDef : public AstNode

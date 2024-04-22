@@ -133,6 +133,20 @@ static AstProcedureCall::SharedPtr processProcedureCall(NonTerminalSymbolSt::Sha
     return ret;
 }
 
+static AstProcedureCall::SharedPtr processCondIf(NonTerminalSymbolSt::SharedPtr node)
+{
+    // auto ret = std::make_shared<AstProcedureCall>();
+    // ASSERT(node->children.size() >= 3); // ( PROCEDURE_NAME OPERATOR* )
+    // ret->name = processName(node->children[1]);
+    // if (node->children.size() > 3) {
+    //     ret->children = processOperands(node->children[2]);
+    //     ASSERT(ret->children.size() > 0);
+    // }
+    //
+    // return ret;
+    return {};
+}
+
 static std::vector<AstNode::SharedPtr> processGeneral(SymbolSt::SharedPtr node)
 {
     if (auto terminalSt = std::dynamic_pointer_cast<TerminalSymbolSt>(node)) {
@@ -176,6 +190,11 @@ static std::vector<AstNode::SharedPtr> processGeneral(SymbolSt::SharedPtr node)
             }
             case NonTerminalSymbol::VAR_DEF: {
                 auto ret = std::dynamic_pointer_cast<AstNode>(processVarDef(nonTerminalSt));
+                ASSERT(ret);
+                return {ret};
+            }
+            case NonTerminalSymbol::IF_COND: {
+                auto ret = std::dynamic_pointer_cast<AstNode>(processCondIf(nonTerminalSt));
                 ASSERT(ret);
                 return {ret};
             }

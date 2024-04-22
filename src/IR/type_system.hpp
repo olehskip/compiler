@@ -15,7 +15,8 @@ enum class TypeID
     STRING,
     LABEL,
     VOID,
-    PROCEDURE
+    PROCEDURE,
+    BOOL
 };
 
 inline std::string typeIdToString(TypeID typeID)

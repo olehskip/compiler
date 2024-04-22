@@ -14,6 +14,7 @@ enum class InstType
     // ASSIGN_LITERAL,
     // OPERATION,
     CALL,
+    ICMP
 };
 
 class Instruction : public Value
@@ -69,6 +70,21 @@ public:
 
     const Procedure::SharedPtr procedure;
     const std::vector<Value::SharedPtr> args;
+};
+
+class ICmpInst : public Instruction
+{
+public:
+    ICmpInst(Value::SharedPtr op1_, Value::SharedPtr op2_)
+        : Instruction(InstType::ICMP, CompileTimeType::getNew(TypeID::BOOL)), op1(op1_), op2(op2_)
+    {
+    }
+
+    void pretty(std::stringstream &stream) const override;
+
+    const Procedure::SharedPtr procedure;
+    const Value::SharedPtr op1;
+    const Value::SharedPtr op2;
 };
 
 #endif // IR_INSTRUCTIONS_HPP

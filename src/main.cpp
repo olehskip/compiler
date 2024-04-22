@@ -16,6 +16,16 @@ static std::string readCode(std::string filePath)
     return std::string((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
 }
 
+static void saveLexTokens(TerminalSymbolsSt terminals, std::string filepath)
+{
+    ASSERT(terminals.size() > 0);
+    std::ofstream file(filepath);
+    for (auto terminal : terminals) {
+        file << getSymbolName(terminal->symbolType) << " \"" << terminal->text << "\"\n";
+    }
+    file.close();
+}
+
 static void saveSt(NonTerminalSymbolSt::SharedPtr programSt, std::string filepath)
 {
     std::stringstream stream;
@@ -54,7 +64,9 @@ static void saveNasm(std::stringstream &stream, std::string filepath)
 
 int main(int argc, char *argv[])
 {
-    ASSERT(argc == 3);
+    ASSERT_MSG(
+        argc == 3,
+        "You should pass 3 arguments to the compiler, input file path and output folder path");
     const std::string inputPath = argv[1], outputPath = argv[2];
     std::cout << "Input file path = " << inputPath << "\n";
     std::cout << "Output folder path = " << outputPath << "\n";
@@ -77,10 +89,12 @@ int main(int argc, char *argv[])
                                  TerminalSymbol::SYMBOL);
     thompsonConstructor->addRule("define", TerminalSymbol::DEFINE);
     thompsonConstructor->addRule("begin", TerminalSymbol::BEGIN);
+    thompsonConstructor->addRule("if", TerminalSymbol::IF);
     thompsonConstructor->addRule(LexicalAnalyzerConstructor::allLetters + "+" +
                                      LexicalAnalyzerConstructor::allLettersDigits + "*",
                                  TerminalSymbol::ID);
     thompsonConstructor->addRule("\\+", TerminalSymbol::ID);
+    thompsonConstructor->addRule("\\=", TerminalSymbol::ID);
     thompsonConstructor->addRule(ThompsonConstructor::allDigits, TerminalSymbol::INT);
     thompsonConstructor->addRule(" +", TerminalSymbol::BLANK);
     thompsonConstructor->addRule("\n+", TerminalSymbol::NEWLINE);
@@ -103,7 +117,8 @@ int main(int argc, char *argv[])
                                                       {NonTerminalSymbol::VAR_DEF},
                                                       {TerminalSymbol::ID},
                                                       {NonTerminalSymbol::LITERAL},
-                                                      {NonTerminalSymbol::PROCEDURE_CALL}});
+                                                      {NonTerminalSymbol::PROCEDURE_CALL},
+                                                      {NonTerminalSymbol::IF_COND}});
     syntaxAnalyzer.addRule(NonTerminalSymbol::BEGIN_EXPR,
                            {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::BEGIN,
                             NonTerminalSymbol::EXPRS, TerminalSymbol::CLOSED_BRACKET});
@@ -131,6 +146,17 @@ int main(int argc, char *argv[])
                             TerminalSymbol::ID, NonTerminalSymbol::EXPR,
                             TerminalSymbol::CLOSED_BRACKET});
 
+    syntaxAnalyzer.addRules(
+        NonTerminalSymbol::IF_COND,
+        {{TerminalSymbol::OPEN_BRACKET, TerminalSymbol::IF, NonTerminalSymbol::IF_COND_TEST,
+          NonTerminalSymbol::IF_COND_BODY, NonTerminalSymbol::IF_COND_ELSE,
+          TerminalSymbol::CLOSED_BRACKET},
+         {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::IF, NonTerminalSymbol::IF_COND_TEST,
+          NonTerminalSymbol::IF_COND_BODY, TerminalSymbol::CLOSED_BRACKET}});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::IF_COND_TEST, {NonTerminalSymbol::EXPR});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::IF_COND_BODY, {NonTerminalSymbol::EXPR});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::IF_COND_ELSE, {NonTerminalSymbol::EXPR});
+
     syntaxAnalyzer.addRules(NonTerminalSymbol::BOOLEAN,
                             {{TerminalSymbol::TRUE_LIT}, {TerminalSymbol::FALSE_LIT}});
     syntaxAnalyzer.addRules(NonTerminalSymbol::LITERAL, {{TerminalSymbol::INT},
@@ -149,6 +175,9 @@ int main(int argc, char *argv[])
     removeBlankNewlineTerminals(lexicalRet);
     ASSERT_MSG(!isLexicalError(lexicalRet), "Lexical analysis failed");
     std::cout << "Code was successfully parsed by lexical analyzer\n";
+    saveLexTokens(lexicalRet, outputPath + "/lex_tokens.txt");
+    std::cout << "Lexical analyzer output was saved\n";
+
     auto syntaxRet = syntaxAnalyzer.parse(lexicalRet);
     ASSERT_MSG(syntaxRet, "Syntax analysis failed");
     std::cout << "Code was successfully parsed by syntax analyzer\n";

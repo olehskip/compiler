@@ -295,8 +295,13 @@ TerminalSymbolsSt getLeafsSt(SymbolSt::SharedPtr root)
 }
 
 // TODO: this function is super ugly
+// TODO: add labels for more clear tree
 void prettyAst(AstNode::SharedPtr astNode, std::stringstream &stream)
 {
+    ASSERT(astNode);
+    if (!astNode)
+        return;
+
     const auto id = std::to_string((unsigned long long)astNode.get());
     if (auto astProgram = std::dynamic_pointer_cast<AstProgram>(astNode)) {
         stream << "digraph G {\n";
@@ -332,12 +337,18 @@ void prettyAst(AstNode::SharedPtr astNode, std::stringstream &stream)
         stream << "\t" << '"' << "[VAR DEF] " << id << " " << astVarDef->name << '"' << " -> ";
         prettyAst(astVarDef->expr, stream);
     } else if (auto astCondIf = std::dynamic_pointer_cast<AstCondIf>(astNode)) {
-        // stream << '"' << "[COND_IF] " << id << '"' << "\n";
-        // // stream << '"' << "[COND_IF] " << id < '"' << "\n";
-        // stream << "\t" << '"' << "[COND_IF] " << id << '"' << " -> ";
-        // for (auto next: {astCondIf->exprToTest, astCondIf->body}) {
-        //     prettyAst(next, stream);
-        // }
+        stream << '"' << "[COND_IF] " << id << '"' << "\n";
+
+        stream << "\t" << '"' << "[COND_IF] " << id << '"' << " -> ";
+        prettyAst(astCondIf->exprToTest, stream);
+
+        stream << "\t" << '"' << "[COND_IF] " << id << '"' << " -> ";
+        prettyAst(astCondIf->body, stream);
+
+        if (astCondIf->elseBody) {
+            stream << "\t" << '"' << "[COND_IF] " << id << '"' << " -> ";
+            prettyAst(astCondIf->elseBody, stream);
+        }
     } else if (auto astId = std::dynamic_pointer_cast<AstId>(astNode)) {
         stream << '"' << "[ID] " << id << " " << astId->name << '"' << "\n";
     } else if (auto astInt = std::dynamic_pointer_cast<AstInt>(astNode)) {

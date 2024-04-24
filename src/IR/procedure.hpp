@@ -20,12 +20,12 @@
  * names to avoid ambiguity
  *
  * The flow to determine the needed procedure:
- * 1) If all the arguments have compile time known types, then we try to find a SpecificProcecure
- *  with the given parameters' types, if we failed then we try find a GeneralProcedure,
- *  which doesn't care about arguments types
- * 2) If at least one of the arguments has a runtime known type, then we search for
- *  GeneraelProcedure with the same name, if we fail then we check whether there is a potential
- *  Dispatcher, if yes we use it to determine the needed SpecificProcedure in runtime
+ * 1) If all the arguments have compile time known types, then we try to find an Operator or a
+ * SpecificProcecure with the given parameters' types, if we failed then we try find a
+ * GeneralProcedure, which doesn't care about arguments types 2) If at least one of the arguments
+ * has a runtime known type, then we search for GeneralProcedure with the same name, if we fail
+ * then we check whether there is a potential Dispatcher, if yes we use it to determine the needed
+ * SpecificProcedure in runtime
  *
  * Dispatcher determines the arguments' types and dispatches a procedure call to the correct
  * SpecificProcedure, this takes place in runtime. It is kind of a symbol table entry, that works in
@@ -110,6 +110,24 @@ public:
                       std::vector<CompileTimeType::SharedPtr> argsTypes_,
                       CompileTimeType::SharedPtr returnType_)
         : Procedure(name_, mangledName_, toTypes(argsTypes_), returnType_)
+    {
+    }
+    ~SpecificProcedure() override {}
+
+    void pretty(std::stringstream &stream) const override
+    {
+        (void)stream;
+        NOT_IMPLEMENTED;
+    }
+};
+
+class Operator : public SpecificProcedure
+{
+public:
+    using SharedPtr = std::shared_ptr<SpecificProcedure>;
+    SpecificProcedure(std::string name_, std::vector<CompileTimeType::SharedPtr> argsTypes_,
+                      CompileTimeType::SharedPtr returnType_)
+        : Procedure(name_, toTypes(argsTypes_), returnType_)
     {
     }
     ~SpecificProcedure() override {}

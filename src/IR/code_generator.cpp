@@ -57,7 +57,8 @@ static Value::SharedPtr _generateSsaEq(AstNode::SharedPtr astNode,
                 simpleBlock->insts.push_back(callInst);
                 return callInst;
             } else {
-                LOG_WARNING << astProcedureCall->name;
+                LOG_WARNING << "Can't find specific procedure with name = \""
+                            << astProcedureCall->name << "\"";
             }
         }
         NOT_IMPLEMENTED;
@@ -66,6 +67,14 @@ static Value::SharedPtr _generateSsaEq(AstNode::SharedPtr astNode,
         ASSERT(varExprProcessed);
         symbolTable->addNewVar(astVarDef->name, varExprProcessed);
         return varExprProcessed;
+    } else if (auto astCondIf = std::dynamic_pointer_cast<AstCondIf>(astNode)) {
+        NOT_IMPLEMENTED;
+        // auto toTestProcessed = _generateSsaEq(astCondIf->exprToTest, simpleBlock, symbolTable);
+        // ASSERT(toTestProcessed);
+        // if (!toTestProcessed->ty->knownInCompileTime()) {
+        //     NOT_IMPLEMENTED;
+        // }
+        // ASSERT(toTestProcessed->ty->isEq(TypeID::BOOL)); 
     } else if (auto astId = std::dynamic_pointer_cast<AstId>(astNode)) {
         // TODO: it isn't clear that astId can be only variables
         auto var = symbolTable->getVar(astId->name);
@@ -101,6 +110,11 @@ SimpleBlock::SharedPtr generateIR(AstProgram::SharedPtr astProgram)
         std::vector<CompileTimeType::SharedPtr>{CompileTimeType::getNew(TypeID::INT64),
                                                 CompileTimeType::getNew(TypeID::INT64)},
         CompileTimeType::getNew(TypeID::INT64)));
+    mainSymbolTable->addSpecificProcedure(std::make_shared<SpecificProcedure>(
+        "=", "equalINT64",
+        std::vector<CompileTimeType::SharedPtr>{CompileTimeType::getNew(TypeID::INT64),
+                                                CompileTimeType::getNew(TypeID::INT64)},
+        CompileTimeType::getNew(TypeID::BOOL)));
     _generateSsaEq(astProgram, mainBasicBlock, mainSymbolTable);
     // ssaSeq.symbolTable->addNewProcedure(std::make_shared<Procedure>(
     //     "+", std::vector<Type>{Type(Type::TypeID::UINT64), Type(Type::TypeID::FLOAT)},

@@ -35,6 +35,9 @@ public:
     // type is never void if it cannot be deduced in compile time
     virtual bool isVoid() const = 0;
 
+    // returns true if the type is known in compile time and typeId equal to anotherTypeId
+    virtual bool isEq(TypeID anotherTypeID) const = 0;
+
 protected:
     Type() {}
 };
@@ -67,6 +70,11 @@ public:
         return typeID == TypeID::VOID;
     }
 
+    bool isEq(TypeID anotherTypeID) const override
+    {
+        return typeID == anotherTypeID;
+    }
+
     const TypeID typeID;
 };
 
@@ -84,6 +92,11 @@ public:
     }
 
     bool isVoid() const override
+    {
+        return false;
+    }
+
+    bool isEq(TypeID /* anotherTypeID */) const override
     {
         return false;
     }

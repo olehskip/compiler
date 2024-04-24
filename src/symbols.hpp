@@ -68,7 +68,7 @@ enum class NonTerminalSymbol
     IF_COND,
     IF_COND_TEST,
     IF_COND_BODY,
-    IF_COND_ELSE,
+    IF_COND_ELSE_BODY,
 
     BOOLEAN,
     LIST,

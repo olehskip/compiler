@@ -368,11 +368,16 @@ void prettySt(SymbolSt::SharedPtr stNode, std::stringstream &stream)
             prettySt(child, stream);
         }
         if (nonTerminalSymbolSt->symbolType == NonTerminalSymbol::PROGRAM) {
-            stream << "\n}\n";
+            stream << "}\n";
         }
     } else if (auto terminalSymbolSt = std::dynamic_pointer_cast<TerminalSymbolSt>(stNode)) {
         const auto symbolName = getSymbolName(terminalSymbolSt->symbolType);
-        stream << "\t" << '"' << symbolName << " " << terminalSymbolSt->text << " " << id << '"';
+        const auto text =
+            terminalSymbolSt->symbolType == TerminalSymbol::STRING
+                ? "\\\"" + terminalSymbolSt->text.substr(1, terminalSymbolSt->text.size() - 2) +
+                      "\\\""
+                : terminalSymbolSt->text;
+        stream << "\t" << '"' << symbolName << " " << text << " " << id << "\"\n";
     } else {
         SHOULD_NOT_HAPPEN;
     }

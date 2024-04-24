@@ -149,13 +149,13 @@ int main(int argc, char *argv[])
     syntaxAnalyzer.addRules(
         NonTerminalSymbol::IF_COND,
         {{TerminalSymbol::OPEN_BRACKET, TerminalSymbol::IF, NonTerminalSymbol::IF_COND_TEST,
-          NonTerminalSymbol::IF_COND_BODY, NonTerminalSymbol::IF_COND_ELSE,
+          NonTerminalSymbol::IF_COND_BODY, NonTerminalSymbol::IF_COND_ELSE_BODY,
           TerminalSymbol::CLOSED_BRACKET},
          {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::IF, NonTerminalSymbol::IF_COND_TEST,
           NonTerminalSymbol::IF_COND_BODY, TerminalSymbol::CLOSED_BRACKET}});
     syntaxAnalyzer.addRule(NonTerminalSymbol::IF_COND_TEST, {NonTerminalSymbol::EXPR});
     syntaxAnalyzer.addRule(NonTerminalSymbol::IF_COND_BODY, {NonTerminalSymbol::EXPR});
-    syntaxAnalyzer.addRule(NonTerminalSymbol::IF_COND_ELSE, {NonTerminalSymbol::EXPR});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::IF_COND_ELSE_BODY, {NonTerminalSymbol::EXPR});
 
     syntaxAnalyzer.addRules(NonTerminalSymbol::BOOLEAN,
                             {{TerminalSymbol::TRUE_LIT}, {TerminalSymbol::FALSE_LIT}});

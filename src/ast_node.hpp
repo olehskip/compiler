@@ -13,6 +13,7 @@ enum class AstNodeType
     PROCEDURE_DEF,
     PROCEDURE_CALL,
     VAR_DEF,
+    COND_IF,
     ID,
     INT,
     FLOAT,
@@ -94,11 +95,15 @@ class AstProcedureDef : public AstNode
 public:
     using SharedPtr = std::shared_ptr<AstProcedureDef>;
 
-    AstProcedureDef() : AstNode(AstNodeType::PROCEDURE_DEF) {}
+    AstProcedureDef(std::string name_, std::vector<AstId::SharedPtr> params_,
+                    AstNode::SharedPtr body_)
+        : AstNode(AstNodeType::PROCEDURE_DEF), name(name_), params(params_), body(body_)
+    {
+    }
 
-    std::string name;
-    std::vector<AstId::SharedPtr> params;
-    AstNode::SharedPtr body;
+    const std::string name;
+    const std::vector<AstId::SharedPtr> params;
+    const AstNode::SharedPtr body;
 };
 
 class AstProcedureCall : public AstNode
@@ -106,10 +111,13 @@ class AstProcedureCall : public AstNode
 public:
     using SharedPtr = std::shared_ptr<AstProcedureCall>;
 
-    AstProcedureCall() : AstNode(AstNodeType::PROCEDURE_CALL) {}
+    AstProcedureCall(std::string name_, std::vector<AstNode::SharedPtr> children_)
+        : AstNode(AstNodeType::PROCEDURE_CALL), name(name_), children(children_)
+    {
+    }
 
-    std::string name;
-    std::vector<AstNode::SharedPtr> children;
+    const std::string name;
+    const std::vector<AstNode::SharedPtr> children;
 };
 
 class AstVarDef : public AstNode
@@ -117,10 +125,29 @@ class AstVarDef : public AstNode
 public:
     using SharedPtr = std::shared_ptr<AstVarDef>;
 
-    AstVarDef() : AstNode(AstNodeType::VAR_DEF) {}
+    AstVarDef(std::string name_, AstNode::SharedPtr expr_)
+        : AstNode(AstNodeType::VAR_DEF), name(name_), expr(expr_)
+    {
+    }
 
-    std::string name;
-    AstNode::SharedPtr expr;
+    const std::string name;
+    const AstNode::SharedPtr expr;
+};
+
+class AstCondIf : public AstNode
+{
+public:
+    using SharedPtr = std::shared_ptr<AstCondIf>;
+
+    AstCondIf(AstNode::SharedPtr exprToTest_, AstNode::SharedPtr body_,
+              AstNode::SharedPtr elseBody_)
+        : AstNode(AstNodeType::COND_IF), exprToTest(exprToTest_), body(body_), elseBody(elseBody_)
+    {
+    }
+
+    const AstNode::SharedPtr exprToTest;
+    const AstNode::SharedPtr body;
+    const AstNode::SharedPtr elseBody; // may be nullptr if no else
 };
 
 #endif // AST_NODE_HPP

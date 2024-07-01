@@ -2,6 +2,7 @@
 #include "log.hpp"
 #include "utils.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <set>

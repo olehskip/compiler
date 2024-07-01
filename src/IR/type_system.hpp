@@ -6,6 +6,7 @@
 #include <magic_enum.hpp>
 #include <memory>
 #include <vector>
+#include <algorithm>
 
 class CompileTimeType;
 enum class TypeID

@@ -1,6 +1,7 @@
 #include "parser_utils.hpp"
 #include "log.hpp"
 
+#include <algorithm>
 #include <stack>
 
 static std::vector<AstNode::SharedPtr> processGeneral(SymbolSt::SharedPtr node);

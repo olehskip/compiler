@@ -18,14 +18,17 @@ displayINT64:
     push rbp
     mov rbp, rsp
 
-    push r8
-    push r9
-    push r10
+    push r8 ; current state of rdi (divided by 10 each iteration)0
+    push r9 ; ptr to the current+1 char to be filled in dislay_buffer
+            ; this is done because you can't substract 1 in lea
+    push r10 ; = 10, reserved to be able to divide by it
 
     mov r8, rdi
     lea r9, [display_buffer + DISPLAY_BUFFER_LEN]
     mov r10, 10
 
+    ; if r8 is positive than just go to the loop
+    ; othwerise multiply it by -1 and go to the loop
     cmp r8, 0
     jge .loop
     imul r8, -1
@@ -43,6 +46,7 @@ displayINT64:
     cmp r8, 0
     jne .loop
 
+    ; put minus in the beggining if r9 was negative
     cmp rdi, 0
     jge .write
     dec r9
@@ -52,8 +56,8 @@ displayINT64:
     mov rax, 1 ; syscall=write
     mov rdi, 1 ; stdout
     mov rsi, r9 ; text
-    imul r9, -1
-    lea r9, [display_buffer + DISPLAY_BUFFER_LEN + r9 + 1]
+    imul r9, -1 ; because can't substract in lea
+    lea r9, [display_buffer + DISPLAY_BUFFER_LEN + r9]
     mov rdx, r9 ; length
     syscall
 

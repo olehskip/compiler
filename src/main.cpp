@@ -58,6 +58,10 @@ int main(int argc, char *argv[])
     const std::string inputPath = argv[1], outputPath = argv[2];
     std::cout << "Input file path = " << inputPath << "\n";
     std::cout << "Output folder path = " << outputPath << "\n";
+    if (std::filesystem::remove_all(outputPath)) {
+        std::cout << "Deleted output folder\n";
+    }
+
     const bool outputDirectoryWasCreated = std::filesystem::create_directories(outputPath);
     ASSERT(outputDirectoryWasCreated);
 
@@ -81,7 +85,7 @@ int main(int argc, char *argv[])
                                      LexicalAnalyzerConstructor::allLettersDigits + "*",
                                  TerminalSymbol::ID);
     thompsonConstructor->addRule("\\+", TerminalSymbol::ID);
-    thompsonConstructor->addRule(ThompsonConstructor::allDigits, TerminalSymbol::INT);
+    thompsonConstructor->addRule(ThompsonConstructor::allDigits + "+", TerminalSymbol::INT);
     thompsonConstructor->addRule(" +", TerminalSymbol::BLANK);
     thompsonConstructor->addRule("\n+", TerminalSymbol::NEWLINE);
     std::cout << "Lexer rules were added\n";

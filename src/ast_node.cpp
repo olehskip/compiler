@@ -44,8 +44,17 @@ Value::SharedPtr AstString::emitSsa(SimpleBlock::SharedPtr)
 
 Value::SharedPtr AstProcedureDef::emitSsa(SimpleBlock::SharedPtr simpleBlock)
 {
-    NOT_IMPLEMENTED;
-    return nullptr;
+    auto newBlock = std::make_shared<SimpleBlock>(simpleBlock);
+    auto ret = body->emitSsa(newBlock);
+    std::vector<RunTimeType::SharedPtr> types;
+    for (size_t i = 0; i < params.size(); ++i) {
+        types.push_back(RunTimeType::getNew());
+    }
+    // mangled name looks stupid, but it is enough for now
+    simpleBlock->symbolTable->addGeneralProcedure(std::make_shared<GeneralProcedure>(
+        name, "func_" + std::to_string((uint64_t)newBlock.get()), types, RunTimeType::getNew()));
+
+    return ret;
 }
 
 Value::SharedPtr AstProcedureCall::emitSsa(SimpleBlock::SharedPtr simpleBlock)
@@ -71,6 +80,10 @@ Value::SharedPtr AstProcedureCall::emitSsa(SimpleBlock::SharedPtr simpleBlock)
             simpleBlock->insts.push_back(callInst);
             return callInst;
         } else {
+            auto generalProcedure = simpleBlock->symbolTable->getGeneralProcedure(name);
+            auto callInst = std::make_shared<CallInst>(generalProcedure, args);
+            simpleBlock->insts.push_back(callInst);
+            return callInst;
             LOG_WARNING << name;
         }
     }

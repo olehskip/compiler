@@ -107,6 +107,12 @@ public:
         : Procedure(name_, toTypes(argsTypes_), returnType_)
     {
     }
+    GeneralProcedure(std::string name_, std::string mangledName_,
+                     std::vector<RunTimeType::SharedPtr> argsTypes_,
+                     RunTimeType::SharedPtr returnType_)
+        : Procedure(name_, mangledName_, toTypes(argsTypes_), returnType_)
+    {
+    }
     ~GeneralProcedure() override {}
 
     void pretty(std::stringstream &stream) const override

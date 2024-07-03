@@ -74,3 +74,15 @@ Value::SharedPtr SymbolTable::getVar(std::string name)
         return nullptr;
     }
 }
+
+const std::unordered_map<std::string, GeneralProcedure::SharedPtr> &
+SymbolTable::getGeneralProceduresTable() const
+{
+    return generalProceduresTable;
+}
+
+const std::unordered_map<std::string, std::vector<SpecificProcedure::SharedPtr>> &
+SymbolTable::getSpecificProceduresTable() const
+{
+    return specificProceduresTable;
+}

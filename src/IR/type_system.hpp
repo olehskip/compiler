@@ -3,10 +3,10 @@
 
 #include "log.hpp"
 
+#include <algorithm>
 #include <magic_enum.hpp>
 #include <memory>
 #include <vector>
-#include <algorithm>
 
 class CompileTimeType;
 enum class TypeID
@@ -77,6 +77,11 @@ public:
 
     RunTimeType() {}
     ~RunTimeType() override {}
+
+    static SharedPtr getNew()
+    {
+        return std::make_shared<RunTimeType>();
+    }
 
     bool knownInCompileTime() const override
     {

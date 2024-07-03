@@ -32,6 +32,11 @@ public:
     // if var with such name doesn't exists, the function returns nullptr
     Value::SharedPtr getVar(std::string name);
 
+    const std::unordered_map<std::string, GeneralProcedure::SharedPtr> &
+    getGeneralProceduresTable() const;
+    const std::unordered_map<std::string, std::vector<SpecificProcedure::SharedPtr>> &
+    getSpecificProceduresTable() const;
+
 private:
     std::unordered_map<std::string, GeneralProcedure::SharedPtr> generalProceduresTable;
     std::unordered_map<std::string, std::vector<SpecificProcedure::SharedPtr>>

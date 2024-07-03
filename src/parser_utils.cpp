@@ -75,12 +75,11 @@ static AstProcedureDef::SharedPtr processProcedureDef(NonTerminalSymbolSt::Share
     auto ret = std::make_shared<AstProcedureDef>();
     ASSERT(node->children.size() >= 6); // ( define (PROCEDURE_NAME ARG*) body )
     ret->name = processName(node->children[3]);
-    // TODO: add support for no params
-    if (node->children.size() > 6) {
+    if (node->children.size() > 7) {
         ret->params = processProcedureParams(node->children[4]);
         ASSERT(ret->params.size() > 0);
     }
-    auto processedBody = processGeneral(node->children[6]);
+    auto processedBody = processGeneral(*std::prev(node->children.end(), 2));
     ASSERT(processedBody.size() == 1);
     ret->body = processedBody.front();
     return ret;

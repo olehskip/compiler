@@ -119,6 +119,11 @@ int main(int argc, char *argv[])
                             TerminalSymbol::OPEN_BRACKET, TerminalSymbol::ID,
                             NonTerminalSymbol::PROCEDURE_PARAMS, TerminalSymbol::CLOSED_BRACKET,
                             NonTerminalSymbol::EXPR, TerminalSymbol::CLOSED_BRACKET});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::PROCEDURE_DEF,
+                           {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::DEFINE,
+                            TerminalSymbol::OPEN_BRACKET, TerminalSymbol::ID,
+                            TerminalSymbol::CLOSED_BRACKET, NonTerminalSymbol::EXPR,
+                            TerminalSymbol::CLOSED_BRACKET});
     syntaxAnalyzer.addRules(
         NonTerminalSymbol::PROCEDURE_PARAMS,
         {{NonTerminalSymbol::PROCEDURE_PARAMS, NonTerminalSymbol::PROCEDURE_PARAM},
@@ -127,6 +132,9 @@ int main(int argc, char *argv[])
     syntaxAnalyzer.addRule(NonTerminalSymbol::PROCEDURE_CALL,
                            {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::ID,
                             NonTerminalSymbol::OPERANDS, TerminalSymbol::CLOSED_BRACKET});
+    syntaxAnalyzer.addRule(
+        NonTerminalSymbol::PROCEDURE_CALL,
+        {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::ID, TerminalSymbol::CLOSED_BRACKET});
     syntaxAnalyzer.addRules(
         NonTerminalSymbol::OPERANDS,
         {{NonTerminalSymbol::OPERANDS, NonTerminalSymbol::OPERAND}, {NonTerminalSymbol::OPERAND}});

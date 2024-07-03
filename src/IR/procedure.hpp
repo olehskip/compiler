@@ -16,25 +16,44 @@
  *  func f(a, b) => return standard_procedure(a, b)
  * Here we call some standard procedure, but we can't know the arguments' types in compile time. To
  * solve this we use a dispatcher, which in runtime checks the arguments' types and returns the
- * needed SpecificProcedure from STD. GeneralProcedure and SpecificProcedure should have different
- * names to avoid ambiguity
+ * needed SpecificProcedure from STD.
  *
  * The flow to determine the needed procedure:
- * 1) If all the arguments have compile time known types, then we try to find a SpecificProcecure
- *  with the given parameters' types, if we failed then we try find a GeneralProcedure,
- *  which doesn't care about arguments types
- * 2) If at least one of the arguments has a runtime known type, then we search for
- *  GeneraelProcedure with the same name, if we fail then we check whether there is a potential
- *  Dispatcher, if yes we use it to determine the needed SpecificProcedure in runtime
+ * if all the arguments have compile time known types:
+ *   if a SpecificProcecure with the given parameters' types:
+ *     use the SpecificProcedure
+ *   else if a GeneralProcedure exists:
+ *     use the GeneralProceedure
+ *   else:
+ *     throw error
+ * else if at least one of the arguments has a runtime known type:
+ *   if at least one SpecificProcedure with the given name exist:
+ *     use a dispatcher to determine SpecificProcedure or GeneralProcedure (if exists)
+ *   else if a GeneralProcedure exists:
+ *     use the GeneralProcedure
+ *   else:
+ *     throw error
+ *
+ * To sum the code above:
+ * we always prefer SpecificProcedure over GeneralProcedure, but if we don't know the types at
+ * compile time we have to use either a Dispatcher if there are several options to choose between or
+ * just GeneralProcedure if it is the only option
  *
  * Dispatcher determines the arguments' types and dispatches a procedure call to the correct
- * SpecificProcedure, this takes place in runtime. It is kind of a symbol table entry, that works in
- * runtime, it pseudocode it would look like:
+ * SpecificProcedure or GeneralProcedure if no SpecificProcedure suits, this takes place at runtime.
+ * If a SpecificProcedure exists, then a Dispatcher for it also exists
+ * It is kind of a symbol table entry, that works in runtime, its pseudocode looks like:
+ *
  * some_standard_procedure_dispatcher args =>
- *  for specificProcedure in specificProcedures:
- *      if specificProcedure.types == args.types:
- *          call specificProcedure
- *  throw error
+ *   for specificProcedure in specificProcedures:
+ *     if specificProcedure.types == args.types:
+ *       call specificProcedure
+ *       return true
+ *
+ *  if a GeneralProcedure exists:
+ *    call the GeneralProcedure
+ *  else:
+ *    return false
  *
  */
 

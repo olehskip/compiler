@@ -6,7 +6,7 @@
 #include <memory>
 
 /* As in the implementation of LLVM IR (do not confuse the implementation and what is printed),
- * generateIR doesn't use "raw" names of objects for instructions,
+ * emitSsa doesn't use "raw" names of objects for instructions,
  * e.g. if we wanted to call a procedure "display", it would emit:
  *  call 0x1245678
  * where 0x12345678i is address to Procedure, however the generator needs to store the names because

@@ -16,6 +16,7 @@ enum class AstNodeType
     BEGIN_EXPR,
     PROCEDURE_DEF,
     PROCEDURE_CALL,
+    COND_IF,
     VAR_DEF,
     ID,
     INT,
@@ -139,6 +140,22 @@ public:
 
     std::string name;
     AstNode::SharedPtr expr;
+};
+
+class AstCondIf : public AstNode
+{
+public:
+    using SharedPtr = std::shared_ptr<AstCondIf>;
+
+    AstCondIf(AstNode::SharedPtr exprToTest_, AstNode::SharedPtr body_,
+              AstNode::SharedPtr elseBody_)
+        : AstNode(AstNodeType::COND_IF), exprToTest(exprToTest_), body(body_), elseBody(elseBody_)
+    {
+    }
+
+    const AstNode::SharedPtr exprToTest;
+    const AstNode::SharedPtr body;
+    const AstNode::SharedPtr elseBody; // may be nullptr if no else
 };
 
 #endif // AST_NODE_HPP

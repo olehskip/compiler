@@ -29,19 +29,16 @@ Value::SharedPtr AstId::emitSsa(SimpleBlock::SharedPtr simpleBlock)
 
 Value::SharedPtr AstInt::emitSsa(SimpleBlock::SharedPtr)
 {
-
     return std::make_shared<ConstantInt>(num);
 }
 
 Value::SharedPtr AstFloat::emitSsa(SimpleBlock::SharedPtr)
 {
-
     return std::make_shared<ConstantFloat>(num);
 }
 
 Value::SharedPtr AstString::emitSsa(SimpleBlock::SharedPtr)
 {
-
     return std::make_shared<ConstantString>(str);
 }
 
@@ -83,7 +80,6 @@ Value::SharedPtr AstProcedureCall::emitSsa(SimpleBlock::SharedPtr simpleBlock)
 
 Value::SharedPtr AstVarDef::emitSsa(SimpleBlock::SharedPtr simpleBlock)
 {
-
     auto varExprProcessed = expr->emitSsa(simpleBlock);
     ASSERT(varExprProcessed);
     simpleBlock->symbolTable->addNewVar(name, varExprProcessed);

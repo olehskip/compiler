@@ -1,8 +1,9 @@
 #ifndef IR_INSTRUCTIONS_HPP
 #define IR_INSTRUCTIONS_HPP
 
-#include "procedure.hpp"
+#include "IR/procedure.hpp"
 
+#include <memory>
 #include <string>
 #include <vector>
 

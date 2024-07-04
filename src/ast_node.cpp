@@ -50,9 +50,8 @@ Value::SharedPtr AstProcedureDef::emitSsa(SimpleBlock::SharedPtr simpleBlock)
     for (size_t i = 0; i < params.size(); ++i) {
         types.push_back(RunTimeType::getNew());
     }
-    // mangled name looks stupid, but it is enough for now
-    simpleBlock->symbolTable->addGeneralProcedure(std::make_shared<GeneralProcedure>(
-        name, "func_" + std::to_string((uint64_t)newBlock.get()), types, RunTimeType::getNew()));
+    simpleBlock->symbolTable->addGeneralProcedure(
+        std::make_shared<GeneralProcedure>(name, types, ret->ty, newBlock));
 
     return ret;
 }
@@ -73,19 +72,17 @@ Value::SharedPtr AstProcedureCall::emitSsa(SimpleBlock::SharedPtr simpleBlock)
 
     if (!containsRunTimeType(argsTypes)) {
         auto compileTimeArgsTypes = toCompileTimeTypes(argsTypes);
-        auto specificProcedure =
+        Procedure::SharedPtr procedure =
             simpleBlock->symbolTable->getSpecificProcedure(name, compileTimeArgsTypes);
-        if (specificProcedure) {
-            auto callInst = std::make_shared<CallInst>(specificProcedure, args);
-            simpleBlock->insts.push_back(callInst);
-            return callInst;
-        } else {
-            auto generalProcedure = simpleBlock->symbolTable->getGeneralProcedure(name);
-            auto callInst = std::make_shared<CallInst>(generalProcedure, args);
-            simpleBlock->insts.push_back(callInst);
-            return callInst;
-            LOG_WARNING << name;
+        if (!procedure) {
+            procedure = simpleBlock->symbolTable->getGeneralProcedure(name);
+            if (!procedure) {
+                LOG_FATAL << "There is no procedure with name" << name;
+            }
         }
+        auto callInst = std::make_shared<CallInst>(procedure, args);
+        simpleBlock->insts.push_back(callInst);
+        return callInst;
     }
     NOT_IMPLEMENTED;
     return nullptr;

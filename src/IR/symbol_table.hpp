@@ -1,9 +1,11 @@
 #ifndef IR_SYMBOL_TABLE_HPP
 #define IR_SYMBOL_TABLE_HPP
 
-#include "procedure.hpp"
+#include "IR/type_system.hpp"
+#include "IR/value.hpp"
 
 #include <memory>
+#include <unordered_map>
 
 /* As in the implementation of LLVM IR (do not confuse the implementation and what is printed),
  * emitSsa doesn't use "raw" names of objects for instructions,
@@ -14,17 +16,21 @@
  * symbol table is not needed anymore and it isn't passed to next steps of the compilation
  */
 
+class GeneralProcedure;
+class SpecificProcedure;
+
 class SymbolTable
 {
 public:
     using SharedPtr = std::shared_ptr<SymbolTable>;
     SymbolTable(std::weak_ptr<SymbolTable> parent_ = std::weak_ptr<SymbolTable>());
 
-    void addGeneralProcedure(GeneralProcedure::SharedPtr procedure);
-    GeneralProcedure::SharedPtr getGeneralProcedure(std::string name);
+    void addGeneralProcedure(std::shared_ptr<GeneralProcedure> procedure);
+    std::shared_ptr<GeneralProcedure> getGeneralProcedure(std::string name);
 
-    void addSpecificProcedure(SpecificProcedure::SharedPtr procedure);
-    SpecificProcedure::SharedPtr getSpecificProcedure(std::string name, CompileTimeTypes types);
+    void addSpecificProcedure(std::shared_ptr<SpecificProcedure> procedure);
+    std::shared_ptr<SpecificProcedure> getSpecificProcedure(std::string name,
+                                                            CompileTimeTypes types);
 
     // if a variable with such name already exists, it gets overwritten
     void addNewVar(std::string name, Value::SharedPtr varValue);
@@ -32,14 +38,14 @@ public:
     // if var with such name doesn't exists, the function returns nullptr
     Value::SharedPtr getVar(std::string name);
 
-    const std::unordered_map<std::string, GeneralProcedure::SharedPtr> &
+    const std::unordered_map<std::string, std::shared_ptr<GeneralProcedure>> &
     getGeneralProceduresTable() const;
-    const std::unordered_map<std::string, std::vector<SpecificProcedure::SharedPtr>> &
+    const std::unordered_map<std::string, std::vector<std::shared_ptr<SpecificProcedure>>> &
     getSpecificProceduresTable() const;
 
 private:
-    std::unordered_map<std::string, GeneralProcedure::SharedPtr> generalProceduresTable;
-    std::unordered_map<std::string, std::vector<SpecificProcedure::SharedPtr>>
+    std::unordered_map<std::string, std::shared_ptr<GeneralProcedure>> generalProceduresTable;
+    std::unordered_map<std::string, std::vector<std::shared_ptr<SpecificProcedure>>>
         specificProceduresTable;
     std::unordered_map<std::string, Value::SharedPtr> varsTable;
     std::weak_ptr<SymbolTable> parent;

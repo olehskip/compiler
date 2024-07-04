@@ -1,5 +1,6 @@
-#include "symbol_table.hpp"
+#include "IR/symbol_table.hpp"
 #include "log.hpp"
+#include "IR/procedure.hpp"
 
 SymbolTable::SymbolTable(std::weak_ptr<SymbolTable> parent_) : parent(parent_) {}
 

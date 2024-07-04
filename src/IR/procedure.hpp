@@ -1,7 +1,7 @@
 #ifndef IR_PROCEDURE_HPP
 #define IR_PROCEDURE_HPP
 
-#include "value.hpp"
+#include "IR/value.hpp"
 
 /*
  * Some procedures (only in the STD so far), have parameters with arguments of specific types, we
@@ -57,6 +57,8 @@
  *
  */
 
+class SimpleBlock;
+
 class Procedure : public Value
 {
 public:
@@ -66,12 +68,14 @@ public:
     const std::string mangledName;
     const std::vector<Type::SharedPtr> argsTypes;
     const Type::SharedPtr returnType;
+    const std::shared_ptr<SimpleBlock> block;
 
 protected:
     Procedure(std::string name_, std::vector<Type::SharedPtr> argsTypes_,
-              Type::SharedPtr returnType_)
+              Type::SharedPtr returnType_, std::shared_ptr<SimpleBlock> block_ = nullptr)
         : Value(CompileTimeType::getNew(TypeID::PROCEDURE)), name(name_),
-          mangledName(mangleName(name, argsTypes_)), argsTypes(argsTypes_), returnType(returnType_)
+          mangledName(mangleName(name, argsTypes_)), argsTypes(argsTypes_), returnType(returnType_),
+          block(block_)
     {
     }
     Procedure(std::string name_, std::string mangledName_, std::vector<Type::SharedPtr> argsTypes_,
@@ -103,13 +107,12 @@ class GeneralProcedure : public Procedure
 public:
     using SharedPtr = std::shared_ptr<GeneralProcedure>;
     GeneralProcedure(std::string name_, std::vector<RunTimeType::SharedPtr> argsTypes_,
-                     RunTimeType::SharedPtr returnType_)
-        : Procedure(name_, toTypes(argsTypes_), returnType_)
+                     Type::SharedPtr returnType_, std::shared_ptr<SimpleBlock> block)
+        : Procedure(name_, toTypes(argsTypes_), returnType_, block)
     {
     }
     GeneralProcedure(std::string name_, std::string mangledName_,
-                     std::vector<RunTimeType::SharedPtr> argsTypes_,
-                     RunTimeType::SharedPtr returnType_)
+                     std::vector<RunTimeType::SharedPtr> argsTypes_, Type::SharedPtr returnType_)
         : Procedure(name_, mangledName_, toTypes(argsTypes_), returnType_)
     {
     }

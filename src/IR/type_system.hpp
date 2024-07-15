@@ -2,6 +2,7 @@
 #define IR_TYPE_SYSTEM_HPP
 
 #include "log.hpp"
+#include "printable.hpp"
 
 #include <algorithm>
 #include <magic_enum.hpp>
@@ -24,7 +25,7 @@ inline std::string typeIdToString(TypeID typeID)
     return std::string(magic_enum::enum_name(typeID));
 }
 
-class Type
+class Type : public Printable
 {
 public:
     virtual ~Type(){};
@@ -67,6 +68,11 @@ public:
         return typeID == TypeID::VOID;
     }
 
+    void pretty(std::stringstream &stream) const override
+    {
+        stream << magic_enum::enum_name(typeID);
+    }
+
     const TypeID typeID;
 };
 
@@ -91,6 +97,11 @@ public:
     bool isVoid() const override
     {
         return false;
+    }
+
+    void pretty(std::stringstream &stream) const override
+    {
+        stream << "RUNTIME_TYPE";
     }
 };
 

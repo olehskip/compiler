@@ -21,6 +21,7 @@ set(SOURCES
     src/IR/value.cpp
     src/IR/instructions.cpp
     src/IR/symbol_table.cpp
+    src/IR/procedure.cpp
 )
 
 add_library(${COMPILER_LIB_OUTPUT} STATIC ${SOURCES})

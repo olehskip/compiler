@@ -23,9 +23,14 @@ public:
     SymbolTable::SharedPtr symbolTable;
     void pretty(std::stringstream &stream) const override
     {
-        for (size_t idx = 0; idx < insts.size(); ++idx) {
-            stream << "$" << std::to_string(uint64_t(insts[idx].get())) << " = ";
-            insts[idx]->pretty(stream);
+        stream << strid << " = block:\n";
+        const auto generalProcedureTable = symbolTable->getGeneralProceduresTable();
+        for (const auto &[name, procedure] : generalProcedureTable) {
+            procedure->pretty(stream);
+        }
+        for (auto inst : insts) {
+            stream << inst->strid << " = ";
+            inst->pretty(stream);
             stream << "\n";
         }
     }

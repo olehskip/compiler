@@ -7,14 +7,16 @@
 #include <optional>
 #include <vector>
 
-class Value
+class Value : public Printable
 {
 public:
-    Value(Type::SharedPtr ty_) : ty(ty_) {}
+    Value(Type::SharedPtr ty_);
     virtual ~Value() {}
-    virtual void pretty(std::stringstream &stream) const = 0;
     const Type::SharedPtr ty;
     using SharedPtr = std::shared_ptr<Value>;
+
+    const uint64_t id;
+    const std::string strid;
 };
 
 class ConstantInt : public Value

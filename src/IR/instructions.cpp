@@ -12,7 +12,7 @@ void CallInst::pretty(std::stringstream &stream) const // override
         if (auto constantIntArg = std::dynamic_pointer_cast<ConstantInt>(*argIt)) {
             constantIntArg->pretty(stream);
         } else {
-            stream << "$" << uint64_t(argIt->get());
+            stream << (*argIt)->strid;
         }
     }
     stream << ")";

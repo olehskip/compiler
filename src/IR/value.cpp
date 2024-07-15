@@ -2,6 +2,16 @@
 
 #include <sstream>
 
+static uint64_t getUniqueNumber()
+{
+    static uint64_t number = 0;
+    return number++;
+}
+
+Value::Value(Type::SharedPtr ty_) : ty(ty_), id(getUniqueNumber()), strid("$" + std::to_string(id))
+{
+}
+
 void ConstantInt::pretty(std::stringstream &stream) const // override
 {
     stream << "CONSTANT_INT " << val;

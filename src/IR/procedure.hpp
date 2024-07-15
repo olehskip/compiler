@@ -59,6 +59,7 @@
 
 class SimpleBlock;
 
+// TODO: Procedure just holding a block is a bit confusing
 class Procedure : public Value
 {
 public:
@@ -69,6 +70,12 @@ public:
     const std::vector<Type::SharedPtr> argsTypes;
     const Type::SharedPtr returnType;
     const std::shared_ptr<SimpleBlock> block;
+
+    bool isOnlyDeclaration() const
+    {
+        return block == nullptr;
+    }
+    void pretty(std::stringstream &stream) const override;
 
 protected:
     Procedure(std::string name_, std::vector<Type::SharedPtr> argsTypes_,
@@ -117,12 +124,6 @@ public:
     {
     }
     ~GeneralProcedure() override {}
-
-    void pretty(std::stringstream &stream) const override
-    {
-        (void)stream;
-        NOT_IMPLEMENTED;
-    }
 };
 
 class SpecificProcedure : public Procedure
@@ -141,12 +142,6 @@ public:
     {
     }
     ~SpecificProcedure() override {}
-
-    void pretty(std::stringstream &stream) const override
-    {
-        (void)stream;
-        NOT_IMPLEMENTED;
-    }
 };
 
 class ProcedureDispatcher : public Value

@@ -21,7 +21,8 @@ def run_program(program, *args):
 def compile_chicken(program, output_folder):
     os.mkdir(output_folder)
     output_file = os.path.join(output_folder, "output")
-    run_program("chicken-csc", program, "-o", output_file)
+    if run_program("chicken-csc", program, "-o", output_file) is None:
+        return None
     stdout = run_program(output_file)
     if stdout is not None:
         with open(os.path.join(output_folder, "stdout.txt"), "w") as f:

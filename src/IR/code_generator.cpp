@@ -49,15 +49,21 @@ Value::SharedPtr AstString::emitSsa(SimpleBlock::SharedPtr)
 Value::SharedPtr AstProcedureDef::emitSsa(SimpleBlock::SharedPtr simpleBlock)
 {
     auto newBlock = std::make_shared<SimpleBlock>(simpleBlock);
-    auto retInst = std::make_shared<RetInst>(body->emitSsa(newBlock));
-    newBlock->insts.push_back(retInst);
+    auto procedureSsa = body->emitSsa(newBlock);
     std::vector<RunTimeType::SharedPtr> types;
     for (size_t i = 0; i < params.size(); ++i) {
         types.push_back(RunTimeType::getNew());
     }
+    if (!procedureSsa->ty->isVoid()) {
+        // TODO: should we return anything if void?
+        // TODO: backend should be flexible, but now we always return the last expr
+        auto retInst = std::make_shared<RetInst>(procedureSsa);
+        newBlock->insts.push_back(retInst);
+        procedureSsa = retInst;
+    }
     simpleBlock->symbolTable->addGeneralProcedure(
-        std::make_shared<GeneralProcedure>(name, types, retInst->ty, newBlock));
-    return retInst;
+        std::make_shared<GeneralProcedure>(name, types, procedureSsa->ty, newBlock));
+    return procedureSsa;
 }
 
 Value::SharedPtr AstProcedureCall::emitSsa(SimpleBlock::SharedPtr simpleBlock)

@@ -1,33 +1,32 @@
 #ifndef X64_NASM_GENERATOR_HPP
 #define X64_NASM_GENERATOR_HPP
 
+#include "IR/code_generator.hpp"
+
 #include <string>
 #include <vector>
-
-#include "IR/code_generator.hpp"
 
 class Register
 {
 public:
-    virtual std::string getData() const = 0;
-    uint64_t value;
+    virtual std::string get() const = 0;
 };
 
-class RealRegister : Register
+class RealRegister : public Register
 {
 public:
-    std::string getData() const override
+    std::string get() const override
     {
         return "REAL_REGISTER_RAX";
     }
 };
 
-class StackRegister : Register
+class StackRegister : public Register
 {
 public:
     StackRegister(uint64_t offset_) : offset(offset_) {}
 
-    std::string getData() const override
+    std::string get() const override
     {
         return "[rbp - " + std::to_string(offset) + "]";
     }
@@ -36,12 +35,12 @@ private:
     const uint64_t offset;
 };
 
-class RoDataRegister : Register
+class RoDataRegister : public Register
 {
 public:
     RoDataRegister(uint64_t id) : name("RODATA_" + std::to_string(id)) {}
 
-    std::string getData() const override
+    std::string get() const override
     {
         return "[" + name + "]";
     }
@@ -53,20 +52,6 @@ public:
 
     const std::string name;
 };
-
-// class ConstantRegister : Register
-// {
-// public:
-//     ConstantRegister(uint64_t data_) : data(data_) {}
-//
-//     std::string getData() const override
-//     {
-//         return std::to_string(data);
-//     }
-//
-// private:
-//     const uint64_t data;
-// };
 
 void generateX64Asm(SimpleBlock::SharedPtr ssaSeq, std::stringstream &stream);
 

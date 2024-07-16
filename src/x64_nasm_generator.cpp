@@ -100,6 +100,22 @@ static void addProcedureEpilogue(std::stringstream &stream)
     stream << "pop rbp ; prologue #2\n";
 }
 
+static void movValue(std::stringstream &body, std::string dest, Value::SharedPtr val,
+                     RodataAllocator &rodata, StackAllocator &stack)
+{
+    body << "mov " << dest << ", ";
+    if (auto constInt = std::dynamic_pointer_cast<ConstantInt>(val)) {
+        body << constInt->val;
+    } else if (auto constString = std::dynamic_pointer_cast<ConstantString>(val)) {
+        body << rodata.getOrAllocate(constString).getPtr();
+    } else {
+        // TODO: redo it, it's stupid
+        body << stack.getStackRegister(val).get();
+    }
+
+    body << "\n";
+}
+
 // TODO: moke it methods of Instruction
 static void _generateX64Asm(SimpleBlock::SharedPtr simpleBlock, std::stringstream &body,
                             RodataAllocator &rodata, StackAllocator &stack, bool isMain = false)
@@ -117,24 +133,15 @@ static void _generateX64Asm(SimpleBlock::SharedPtr simpleBlock, std::stringstrea
             ASSERT(procedure);
             for (size_t argIdx = 0; argIdx < callInst->args.size(); ++argIdx) {
                 auto arg = callInst->args[argIdx];
-                if (auto constIntArg = std::dynamic_pointer_cast<ConstantInt>(arg)) {
-                    body << "mov " << getParamRegisterName(argIdx) << ", " << constIntArg->val
-                         << "\n";
-                } else if (auto constStringArg = std::dynamic_pointer_cast<ConstantString>(arg)) {
-                    auto registerVal = rodata.getOrAllocate(constStringArg);
-                    body << "mov " << getParamRegisterName(argIdx) << ", " << registerVal.getPtr()
-                         << "\n";
-                } else {
-                    auto registerVal = stack.getStackRegister(arg);
-                    body << "mov " << getParamRegisterName(argIdx) << ", " << registerVal.getData()
-                         << "\n";
-                }
+                movValue(body, getParamRegisterName(argIdx), arg, rodata, stack);
             }
             body << "call " << callInst->procedure->mangledName << "\n";
             if (!procedure->returnType->isVoid()) {
                 body << "push rax\n";
                 stack.allocate(callInst);
             }
+        } else if (auto retInst = std::dynamic_pointer_cast<RetInst>(inst)) {
+            movValue(body, "rax", retInst->val, rodata, stack);
         } else {
             ASSERT("Not precessed ssa form type");
         }
@@ -167,6 +174,7 @@ void generateX64Asm(SimpleBlock::SharedPtr mainSimpleBlock, std::stringstream &s
         for (const auto &[name, procedure] : generalProcedureTable) {
             body << name << ":\n";
             _generateX64Asm(procedure->block, body, rodata, stack);
+            body << "\n";
         }
         // nextSimpleBlock->symbolTable->prc
         nextSimpleBlock = mainSimpleBlock->parent;
@@ -189,5 +197,5 @@ void generateX64Asm(SimpleBlock::SharedPtr mainSimpleBlock, std::stringstream &s
     end << "mov rdi, 0\n";
     end << "syscall\n";
 
-    stream << header.str() << body.str() << end.str();
+    stream << header.str() << "\n" << body.str() << end.str();
 }

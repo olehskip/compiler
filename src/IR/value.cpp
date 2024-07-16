@@ -1,5 +1,6 @@
 #include "value.hpp"
 
+#include <iomanip>
 #include <sstream>
 
 static uint64_t getUniqueNumber()
@@ -24,5 +25,5 @@ void ConstantFloat::pretty(std::stringstream &stream) const // override
 
 void ConstantString::pretty(std::stringstream &stream) const // override
 {
-    stream << "CONSTANT_STRING " << str;
+    stream << "CONSTANT_STRING " << std::quoted(str);
 }

@@ -49,15 +49,15 @@ Value::SharedPtr AstString::emitSsa(SimpleBlock::SharedPtr)
 Value::SharedPtr AstProcedureDef::emitSsa(SimpleBlock::SharedPtr simpleBlock)
 {
     auto newBlock = std::make_shared<SimpleBlock>(simpleBlock);
-    auto ret = body->emitSsa(newBlock);
+    auto procedureSsa = body->emitSsa(newBlock);
     std::vector<RunTimeType::SharedPtr> types;
     for (size_t i = 0; i < params.size(); ++i) {
         types.push_back(RunTimeType::getNew());
     }
     simpleBlock->symbolTable->addGeneralProcedure(
-        std::make_shared<GeneralProcedure>(name, types, ret->ty, newBlock));
-
-    return ret;
+        std::make_shared<GeneralProcedure>(name, types, procedureSsa->ty, newBlock));
+    // TODO: add return
+    return procedureSsa;
 }
 
 Value::SharedPtr AstProcedureCall::emitSsa(SimpleBlock::SharedPtr simpleBlock)

@@ -15,6 +15,7 @@ enum class InstType
     // ASSIGN_LITERAL,
     // OPERATION,
     CALL,
+    RET,
 };
 
 class Instruction : public Value
@@ -70,6 +71,16 @@ public:
 
     const Procedure::SharedPtr procedure;
     const std::vector<Value::SharedPtr> args;
+};
+
+class RetInst : public Instruction
+{
+public:
+    RetInst(Value::SharedPtr val_) : Instruction(InstType::RET, val_->ty), val(val_) {}
+
+    void pretty(std::stringstream &stream) const override;
+
+    const Value::SharedPtr val;
 };
 
 #endif // IR_INSTRUCTIONS_HPP

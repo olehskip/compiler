@@ -14,7 +14,7 @@ void Procedure::pretty(std::stringstream &stream) const
             stream << ", ";
         }
     }
-    stream << ") ";
+    stream << ")";
     if (isOnlyDeclaration()) {
         stream << " ONLY_DECLARATION\n";
     } else {

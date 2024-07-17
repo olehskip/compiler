@@ -9,7 +9,8 @@ static uint64_t getUniqueNumber()
     return number++;
 }
 
-Value::Value(Type::SharedPtr ty_) : ty(ty_), id(getUniqueNumber()), strid("$" + std::to_string(id))
+Value::Value(Type::SharedPtr ty_, bool isConstant_)
+    : ty(ty_), id(getUniqueNumber()), strid("$" + std::to_string(id)), isConstant(isConstant_)
 {
 }
 

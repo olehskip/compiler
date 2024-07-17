@@ -166,7 +166,23 @@ static void addProcedureEpilogue(std::stringstream &stream)
     stream << "pop rbp ; prologue #2\n";
 }
 
-// TODO: break it into methods of Instruction
+static void movValue(std::stringstream &body, std::string dest, Value::SharedPtr val,
+                     RodataAllocator &rodata, StackAllocator &stack)
+{
+    body << "mov " << dest << ", ";
+    if (auto constInt = std::dynamic_pointer_cast<ConstantInt>(val)) {
+        body << constInt->val;
+    } else if (auto constString = std::dynamic_pointer_cast<ConstantString>(val)) {
+        body << rodata.getOrAllocate(constString).getPtr();
+    } else {
+        // TODO: redo it, it's stupid
+        body << stack.getStackRegister(val).get();
+    }
+
+    body << "\n";
+}
+
+// TODO: moke it methods of Instruction
 static void _generateX64Asm(SimpleBlock::SharedPtr simpleBlock, std::stringstream &body,
                             ValueKeeper &valueKeeper, bool isMain = false)
 {
@@ -269,5 +285,5 @@ void generateX64Asm(SimpleBlock::SharedPtr mainSimpleBlock, std::stringstream &s
     end << "mov rdi, 0\n";
     end << "syscall\n";
 
-    stream << header.str() << body.str() << end.str();
+    stream << header.str() << "\n" << body.str() << end.str();
 }

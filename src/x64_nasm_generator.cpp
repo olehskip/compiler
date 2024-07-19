@@ -13,7 +13,7 @@ enum class Register
     SECOND_ARG,
 };
 
-Register getRegByArgIdx(uint8_t idx)
+static Register getRegByArgIdx(uint8_t idx)
 {
     switch (idx) {
         case 0:
@@ -23,10 +23,11 @@ Register getRegByArgIdx(uint8_t idx)
         default:
             NOT_IMPLEMENTED;
     }
+    SHOULD_NOT_HAPPEN;
     return Register();
 }
 
-std::string getRegName(Register reg)
+static std::string getRegName(Register reg)
 {
     switch (reg) {
         case Register::RET:
@@ -53,7 +54,7 @@ public:
     std::string getData() const
     {
         if (!regLocs.empty()) {
-            return getRegisterName(*regLocs.begin());
+            return getRegName(*regLocs.begin());
         } else if (isRodata) {
             return "RODATA_" + std::to_string(value->id);
         }
@@ -104,6 +105,7 @@ class ValueKeeper
 public:
     ValueStored::SharedPtr storeToRodata(Constant::SharedConstPtr value)
     {
+        ASSERT(value);
         auto valueStored = getOrCreateValueStored(value);
         valueStored->putToRoData();
         rodata.insert(valueStored);
@@ -112,6 +114,7 @@ public:
 
     bool storeToReg(Value::SharedConstPtr value, Register reg, bool forced)
     {
+        ASSERT(value);
         auto previousRegData = registersData[reg];
         if (previousRegData && forced) {
             previousRegData->evictFromRegister(reg);
@@ -132,11 +135,14 @@ public:
         return storeToReg(srcValueStored->value, dest, forced);
     }
 
+    // void newStack() {}
+
 private:
     ValueStored::SharedPtr getOrCreateValueStored(Value::SharedConstPtr value)
     {
+        ASSERT(value);
         auto valueStored = allValues[value];
-        if (valueStored) {
+        if (!valueStored) {
             valueStored = std::make_shared<ValueStored>(value);
             allValues[value] = valueStored;
         }
@@ -166,20 +172,22 @@ static void addProcedureEpilogue(std::stringstream &stream)
     stream << "pop rbp ; prologue #2\n";
 }
 
-static void movValue(std::stringstream &body, std::string dest, Value::SharedPtr val,
-                     RodataAllocator &rodata, StackAllocator &stack)
+static void storeValueToRegAndEmit(std::stringstream &body, Value::SharedPtr val, Register reg,
+                                   ValueKeeper &valueKeeper, bool isForced = false)
 {
-    body << "mov " << dest << ", ";
-    if (auto constInt = std::dynamic_pointer_cast<ConstantInt>(val)) {
-        body << constInt->val;
-    } else if (auto constString = std::dynamic_pointer_cast<ConstantString>(val)) {
-        body << rodata.getOrAllocate(constString).getPtr();
-    } else {
-        // TODO: redo it, it's stupid
-        body << stack.getStackRegister(val).get();
-    }
+    const bool wasInserted = valueKeeper.storeToReg(val, reg, isForced);
+    if (wasInserted) {
+        body << "mov " << getRegName(reg) << ", ";
+        if (auto constInt = std::dynamic_pointer_cast<ConstantInt>(val)) {
+            body << constInt->val;
+        } else if (auto constString = std::dynamic_pointer_cast<ConstantString>(val)) {
+            body << valueKeeper.storeToRodata(constString).get();
+        } else {
+            NOT_IMPLEMENTED;
+        }
 
-    body << "\n";
+        body << "\n";
+    }
 }
 
 // TODO: moke it methods of Instruction
@@ -198,39 +206,17 @@ static void _generateX64Asm(SimpleBlock::SharedPtr simpleBlock, std::stringstrea
             auto procedure = callInst->procedure;
             ASSERT(procedure);
 
-            // external procedures likely expect arguments to be stored in the registers
-            const bool areArgsForced = callInst->procedure->isOnlyDeclaration();
             for (size_t argIdx = 0; argIdx < callInst->args.size(); ++argIdx) {
                 auto arg = callInst->args[argIdx];
                 const auto reg = getRegByArgIdx(argIdx);
-                const auto regName = getRegName(reg);
-                const bool wasPushed = valueKeeper.storeToReg(arg, reg, areArgsForced);
-                if (wasPushed) {
-                    body << "mov " << regName << ", ";
-                }
-                if (auto constIntArg = std::dynamic_pointer_cast<ConstantInt>(arg)) {
-                    // body << constIntArg->val
-                } else if (auto constStringArg = std::dynamic_pointer_cast<ConstantString>(arg)) {
-                    // auto registerVal = rodata.getOrAllocate(constStringArg);
-                    // body << "mov " << getParamRegisterName(argIdx) << ", " <<
-                    // registerVal.getPtr()
-                    //      << "\n";
-                } else {
-                    //     auto registerVal = stack.getStackRegister(arg);
-                    //     body << "mov " << getParamRegisterName(argIdx) << ", " <<
-                    //     registerVal.getData()
-                    //          << "\n";
-                }
+                storeValueToRegAndEmit(body, arg, reg, valueKeeper, true);
             }
-            body << "\n";
             body << "call " << callInst->procedure->mangledName << "\n";
             if (!procedure->returnType->isVoid()) {
-                // valueKeeper.mov(procedure, Register::FIRST_ARG, true);
-                // body << "push rax\n";
-                // stack.allocate(callInst);
+                valueKeeper.storeToReg(procedure, Register::RET, true);
             }
         } else if (auto retInst = std::dynamic_pointer_cast<RetInst>(inst)) {
-            valueKeeper.storeToReg(retInst->val, Register::RET, true);
+            // valueKeeper.storeToReg(retInst->val, Register::RET, true);
         } else {
             ASSERT("Not precessed ssa form type");
         }

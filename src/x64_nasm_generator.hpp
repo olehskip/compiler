@@ -4,9 +4,6 @@
 #include "IR/code_generator.hpp"
 
 #include <string>
-#include <vector>
-
-#include "IR/code_generator.hpp"
 
 void generateX64Asm(SimpleBlock::SharedPtr ssaSeq, std::stringstream &stream);
 

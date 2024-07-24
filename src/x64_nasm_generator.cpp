@@ -42,121 +42,101 @@ static std::string getRegName(Register reg)
     return "";
 }
 
-class ValueStored
+class StackEntry
 {
 public:
-    using SharedPtr = std::shared_ptr<ValueStored>;
-    ValueStored(Value::SharedConstPtr value_, bool isPreserved_ = false)
-        : isPreserved(isPreserved_), value(value_)
+    StackEntry(uint64_t offset_) : offset(offset_) {}
+
+    std::string get() const
     {
+        return "[rbp - " + std::to_string(offset) + "]";
     }
-
-    std::string getData() const
-    {
-        if (!regLocs.empty()) {
-            return getRegName(*regLocs.begin());
-        } else if (isRodata) {
-            return "RODATA_" + std::to_string(value->id);
-        }
-        ASSERT("value is not stored");
-        return "";
-    }
-
-    std::string getRodata() const
-    {
-        ASSERT(isRodata);
-        return "RODATA_" + std::to_string(value->id);
-    }
-
-    void storeToRegister(Register reg)
-    {
-        regLocs.insert(reg);
-    }
-
-    void evictFromRegister(Register reg)
-    {
-        ASSERT_MSG(regLocs.contains(reg),
-                   "evictFromRegister was requested, but value is not in any register");
-        regLocs.erase(reg);
-        if (!isRodata && isPreserved) {
-            NOT_IMPLEMENTED;
-        }
-    }
-
-    void putToRoData()
-    {
-        isRodata = true;
-    }
-
-    const bool isPreserved; // saved to stack on eviction if true
-
-    const bool isJustValue = false;
-
-    const Value::SharedConstPtr value;
 
 private:
-    std::unordered_set<Register> regLocs;
-    // std::unordered_set<Stack> stacks;
-    bool isRodata = false;
+    const uint64_t offset;
 };
 
-class ValueKeeper
+class StackAllocator
 {
 public:
-    ValueStored::SharedPtr storeToRodata(Constant::SharedConstPtr value)
+    StackEntry allocate(Value::SharedPtr value)
     {
-        ASSERT(value);
-        auto valueStored = getOrCreateValueStored(value);
-        valueStored->putToRoData();
-        rodata.insert(valueStored);
-        return valueStored;
+        currentOffset += 8;
+        const StackEntry ret(currentOffset);
+        const bool wasInserted = container.insert({value, ret}).second;
+        ASSERT(wasInserted);
+        return ret;
     }
 
-    bool storeToReg(Value::SharedConstPtr value, Register reg, bool forced)
+    StackEntry getStackRegister(Value::SharedPtr value)
     {
-        ASSERT(value);
-        auto previousRegData = registersData[reg];
-        if (previousRegData && forced) {
-            previousRegData->evictFromRegister(reg);
-        }
-        if (!previousRegData || forced) {
-            auto valueStored = getOrCreateValueStored(value);
-            valueStored->storeToRegister(reg);
-            return true;
-        }
-
-        return false;
+        ASSERT(container.contains(value));
+        return container.at(value);
     }
 
-    bool movRegToReg(Register src, Register dest, bool forced)
+    uint64_t getTotalSize() const
     {
-        auto srcValueStored = registersData[src];
-        ASSERT_MSG(srcValueStored, "requested to mov value from reg to reg, but src reg is empty");
-        return storeToReg(srcValueStored->value, dest, forced);
+        return currentOffset;
     }
-
-    // void newStack() {}
 
 private:
-    ValueStored::SharedPtr getOrCreateValueStored(Value::SharedConstPtr value)
+    std::unordered_map<Value::SharedPtr, StackEntry> container;
+    uint64_t currentOffset = 0;
+};
+
+class RodataEntry
+{
+public:
+    RodataEntry(uint64_t id) : name("RODATA_" + std::to_string(id)) {}
+
+    std::string get() const
     {
-        ASSERT(value);
-        auto valueStored = allValues[value];
-        if (!valueStored) {
-            valueStored = std::make_shared<ValueStored>(value);
-            allValues[value] = valueStored;
-        }
-        return valueStored;
+        return "[" + name + "]";
     }
 
-    std::unordered_map<Value::SharedConstPtr, ValueStored::SharedPtr> allValues;
-    std::unordered_set<ValueStored::SharedPtr> rodata;
-    std::unordered_map<Register, ValueStored::SharedPtr> registersData;
+    const std::string name;
+};
+
+class RodataAllocator
+{
+public:
+    RodataEntry allocate(Value::SharedPtr value)
+    {
+        const RodataEntry ret(currentIdx++);
+        const bool wasInserted = container.insert({value, ret}).second;
+        ASSERT(wasInserted);
+        return ret;
+    }
+
+    RodataEntry get(Value::SharedPtr value)
+    {
+        ASSERT(container.contains(value));
+        return container.at(value);
+    }
+
+    RodataEntry getOrAllocate(Value::SharedPtr value)
+    {
+        const auto it = container.find(value);
+        if (it != container.end()) {
+            return it->second;
+        }
+        return allocate(value);
+    }
+
+private:
+    std::unordered_map<Value::SharedPtr, RodataEntry> container;
+    uint64_t currentIdx = 0;
+
+    using ContainerIterator = decltype(std::begin(container));
 
 public:
-    const decltype(rodata) &getAllRodata()
+    ContainerIterator begin()
     {
-        return rodata;
+        return container.begin();
+    }
+    ContainerIterator end()
+    {
+        return container.end();
     }
 };
 
@@ -172,27 +152,25 @@ static void addProcedureEpilogue(std::stringstream &stream)
     stream << "pop rbp ; prologue #2\n";
 }
 
-static void storeValueToRegAndEmit(std::stringstream &body, Value::SharedPtr val, Register reg,
-                                   ValueKeeper &valueKeeper, bool isForced = false)
+static void movValueToReg(std::stringstream &body, Value::SharedPtr value, Register reg,
+                          StackAllocator &stackAllocator, RodataAllocator &rodataAllocator)
 {
-    const bool wasInserted = valueKeeper.storeToReg(val, reg, isForced);
-    if (wasInserted) {
-        body << "mov " << getRegName(reg) << ", ";
-        if (auto constInt = std::dynamic_pointer_cast<ConstantInt>(val)) {
-            body << constInt->val;
-        } else if (auto constString = std::dynamic_pointer_cast<ConstantString>(val)) {
-            body << valueKeeper.storeToRodata(constString).get();
-        } else {
-            NOT_IMPLEMENTED;
-        }
-
-        body << "\n";
+    body << "mov " << getRegName(reg) << ", ";
+    if (auto constInt = std::dynamic_pointer_cast<ConstantInt>(value)) {
+        body << constInt->val;
+    } else if (auto constString = std::dynamic_pointer_cast<ConstantString>(value)) {
+        body << rodataAllocator.allocate(constString).name;
+    } else {
+        // TODO: redo it, it's stupid (is it?)
+        body << stackAllocator.getStackRegister(value).get();
     }
-}
 
+    body << "\n";
+}
 // TODO: moke it methods of Instruction
 static void _generateX64Asm(SimpleBlock::SharedPtr simpleBlock, std::stringstream &body,
-                            ValueKeeper &valueKeeper, bool isMain = false)
+                            StackAllocator &stackAllocator, RodataAllocator &rodataAllocator,
+                            bool isMain = false)
 {
     if (!isMain) {
         addProcedurePrologue(body);
@@ -209,14 +187,15 @@ static void _generateX64Asm(SimpleBlock::SharedPtr simpleBlock, std::stringstrea
             for (size_t argIdx = 0; argIdx < callInst->args.size(); ++argIdx) {
                 auto arg = callInst->args[argIdx];
                 const auto reg = getRegByArgIdx(argIdx);
-                storeValueToRegAndEmit(body, arg, reg, valueKeeper, true);
+                movValueToReg(body, arg, reg, stackAllocator, rodataAllocator);
             }
             body << "call " << callInst->procedure->mangledName << "\n";
             if (!procedure->returnType->isVoid()) {
-                valueKeeper.storeToReg(procedure, Register::RET, true);
+                body << "push rax\n";
+                stackAllocator.allocate(callInst);
             }
         } else if (auto retInst = std::dynamic_pointer_cast<RetInst>(inst)) {
-            // valueKeeper.storeToReg(retInst->val, Register::RET, true);
+            movValueToReg(body, retInst->val, Register::RET, stackAllocator, rodataAllocator);
         } else {
             ASSERT("Not precessed ssa form type");
         }
@@ -230,7 +209,8 @@ static void _generateX64Asm(SimpleBlock::SharedPtr simpleBlock, std::stringstrea
 void generateX64Asm(SimpleBlock::SharedPtr mainSimpleBlock, std::stringstream &stream)
 {
     ASSERT(mainSimpleBlock);
-    ValueKeeper valueKeeper;
+    StackAllocator mainStackAllocator;
+    RodataAllocator rodataAllocator;
 
     std::stringstream header;
     // TODO: make it automatically
@@ -247,7 +227,8 @@ void generateX64Asm(SimpleBlock::SharedPtr mainSimpleBlock, std::stringstream &s
             nextSimpleBlock->symbolTable->getGeneralProceduresTable();
         for (const auto &[name, procedure] : generalProcedureTable) {
             body << name << ":\n";
-            _generateX64Asm(procedure->block, body, valueKeeper);
+            StackAllocator procedureStackAllocator;
+            _generateX64Asm(procedure->block, body, procedureStackAllocator, rodataAllocator);
         }
         // nextSimpleBlock->symbolTable->prc
         nextSimpleBlock = mainSimpleBlock->parent;
@@ -255,15 +236,14 @@ void generateX64Asm(SimpleBlock::SharedPtr mainSimpleBlock, std::stringstream &s
 
     body << "_start:\n";
     body << "mov rbp, rsp\n";
-    _generateX64Asm(mainSimpleBlock, body, valueKeeper, true);
+    _generateX64Asm(mainSimpleBlock, body, mainStackAllocator, rodataAllocator, true);
 
     header << "section .rodata\n";
-    const auto rodata = valueKeeper.getAllRodata();
-    for (const auto &storedValue : rodata) {
-        auto constStringArg = std::dynamic_pointer_cast<const ConstantString>(storedValue->value);
-        ASSERT_MSG(constStringArg, "Only string can appear in rodata so far");
+    for (const auto &[value, rodataEntry] : rodataAllocator) {
+        auto stringRodata = std::dynamic_pointer_cast<const ConstantString>(value);
+        ASSERT_MSG(stringRodata, "Only string can appear in rodata so far");
         // `` is used so \n works
-        header << storedValue->getRodata() + " db " + "`" + constStringArg->str + "`,0\n";
+        header << rodataEntry.name + " db " + "`" + stringRodata->str + "`,0\n";
     }
 
     std::stringstream end;

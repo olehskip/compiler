@@ -144,6 +144,19 @@ public:
     ~SpecificProcedure() override {}
 };
 
+class ProcParameter : public Value
+{
+public:
+    using SharedPtr = std::shared_ptr<ProcParameter>;
+    ProcParameter(uint8_t idx_) : Value(RunTimeType::getNew()), idx(idx_) {}
+    ~ProcParameter() override{};
+    void pretty(std::stringstream &) const override
+    {
+        NOT_IMPLEMENTED;
+    }
+    const uint8_t idx;
+};
+
 class ProcedureDispatcher : public Value
 {
 public:

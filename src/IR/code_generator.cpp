@@ -2,6 +2,7 @@
 #include "ast_node.hpp"
 #include "log.hpp"
 
+#include <iomanip>
 #include <sstream>
 
 Value::SharedPtr AstProgram::emitSsa(SimpleBlock::SharedPtr simpleBlock)
@@ -49,11 +50,12 @@ Value::SharedPtr AstString::emitSsa(SimpleBlock::SharedPtr)
 Value::SharedPtr AstProcedureDef::emitSsa(SimpleBlock::SharedPtr simpleBlock)
 {
     auto newBlock = std::make_shared<SimpleBlock>(simpleBlock);
-    auto procedureSsa = body->emitSsa(newBlock);
-    std::vector<RunTimeType::SharedPtr> types;
+    std::vector<RunTimeType::SharedPtr> argsTypes;
     for (size_t i = 0; i < params.size(); ++i) {
-        types.push_back(RunTimeType::getNew());
+        newBlock->symbolTable->addNewVar(params[i]->name, std::make_shared<ProcParameter>(i));
+        argsTypes.push_back(RunTimeType::getNew());
     }
+    auto procedureSsa = body->emitSsa(newBlock);
     if (!procedureSsa->ty->isVoid()) {
         // TODO: should we return anything if void?
         // TODO: backend should be flexible, but now we always return the last expr
@@ -62,7 +64,7 @@ Value::SharedPtr AstProcedureDef::emitSsa(SimpleBlock::SharedPtr simpleBlock)
         procedureSsa = retInst;
     }
     simpleBlock->symbolTable->addGeneralProcedure(
-        std::make_shared<GeneralProcedure>(name, types, procedureSsa->ty, newBlock));
+        std::make_shared<GeneralProcedure>(name, argsTypes, procedureSsa->ty, newBlock));
     return procedureSsa;
 }
 
@@ -80,6 +82,7 @@ Value::SharedPtr AstProcedureCall::emitSsa(SimpleBlock::SharedPtr simpleBlock)
 
     // check out the comments in IR/procedure.hpp to understand the flow
 
+    // TODO: refactor it, it's ugly
     if (!containsRunTimeType(argsTypes)) {
         auto compileTimeArgsTypes = toCompileTimeTypes(argsTypes);
         Procedure::SharedPtr procedure =
@@ -87,8 +90,16 @@ Value::SharedPtr AstProcedureCall::emitSsa(SimpleBlock::SharedPtr simpleBlock)
         if (!procedure) {
             procedure = simpleBlock->symbolTable->getGeneralProcedure(name);
             if (!procedure) {
-                LOG_FATAL << "There is no procedure with name" << name;
+                LOG_FATAL << "There is no procedure with name (first if) " << std::quoted(name);
             }
+        }
+        auto callInst = std::make_shared<CallInst>(procedure, args);
+        simpleBlock->insts.push_back(callInst);
+        return callInst;
+    } else {
+        Procedure::SharedPtr procedure = simpleBlock->symbolTable->getGeneralProcedure(name);
+        if (!procedure) {
+            LOG_FATAL << "There is no procedure with name (second if) " << std::quoted(name);
         }
         auto callInst = std::make_shared<CallInst>(procedure, args);
         simpleBlock->insts.push_back(callInst);

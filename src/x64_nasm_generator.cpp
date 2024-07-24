@@ -68,7 +68,7 @@ public:
         return ret;
     }
 
-    StackEntry getStackRegister(Value::SharedPtr value)
+    StackEntry getStackEntry(Value::SharedPtr value)
     {
         ASSERT(container.contains(value));
         return container.at(value);
@@ -160,9 +160,11 @@ static void movValueToReg(std::stringstream &body, Value::SharedPtr value, Regis
         body << constInt->val;
     } else if (auto constString = std::dynamic_pointer_cast<ConstantString>(value)) {
         body << rodataAllocator.allocate(constString).name;
+    } else if (auto procParam = std::dynamic_pointer_cast<ProcParameter>(value)) {
+        body << getRegName(getRegByArgIdx(procParam->idx));
     } else {
-        // TODO: redo it, it's stupid (is it?)
-        body << stackAllocator.getStackRegister(value).get();
+        // TODO: redo it, it's stupid
+        body << stackAllocator.getStackEntry(value).get();
     }
 
     body << "\n";
@@ -225,8 +227,8 @@ void generateX64Asm(SimpleBlock::SharedPtr mainSimpleBlock, std::stringstream &s
     while (nextSimpleBlock) {
         const auto generalProcedureTable =
             nextSimpleBlock->symbolTable->getGeneralProceduresTable();
-        for (const auto &[name, procedure] : generalProcedureTable) {
-            body << name << ":\n";
+        for (const auto &[_, procedure] : generalProcedureTable) {
+            body << procedure->mangledName << ":\n";
             StackAllocator procedureStackAllocator;
             _generateX64Asm(procedure->block, body, procedureStackAllocator, rodataAllocator);
         }

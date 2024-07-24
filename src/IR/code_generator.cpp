@@ -82,31 +82,20 @@ Value::SharedPtr AstProcedureCall::emitSsa(SimpleBlock::SharedPtr simpleBlock)
 
     // check out the comments in IR/procedure.hpp to understand the flow
 
-    // TODO: refactor it, it's ugly
+    Procedure::SharedPtr procedure;
     if (!containsRunTimeType(argsTypes)) {
         auto compileTimeArgsTypes = toCompileTimeTypes(argsTypes);
-        Procedure::SharedPtr procedure =
-            simpleBlock->symbolTable->getSpecificProcedure(name, compileTimeArgsTypes);
-        if (!procedure) {
-            procedure = simpleBlock->symbolTable->getGeneralProcedure(name);
-            if (!procedure) {
-                LOG_FATAL << "There is no procedure with name (first if) " << std::quoted(name);
-            }
-        }
-        auto callInst = std::make_shared<CallInst>(procedure, args);
-        simpleBlock->insts.push_back(callInst);
-        return callInst;
-    } else {
-        Procedure::SharedPtr procedure = simpleBlock->symbolTable->getGeneralProcedure(name);
-        if (!procedure) {
-            LOG_FATAL << "There is no procedure with name (second if) " << std::quoted(name);
-        }
-        auto callInst = std::make_shared<CallInst>(procedure, args);
-        simpleBlock->insts.push_back(callInst);
-        return callInst;
+        procedure = simpleBlock->symbolTable->getSpecificProcedure(name, compileTimeArgsTypes);
     }
-    NOT_IMPLEMENTED;
-    return nullptr;
+    if (!procedure) {
+        procedure = simpleBlock->symbolTable->getGeneralProcedure(name);
+    }
+    if (!procedure) {
+        LOG_FATAL << "There is no procedure with name " << std::quoted(name);
+    }
+    auto callInst = std::make_shared<CallInst>(procedure, args);
+    simpleBlock->insts.push_back(callInst);
+    return callInst;
 }
 
 Value::SharedPtr AstVarDef::emitSsa(SimpleBlock::SharedPtr simpleBlock)

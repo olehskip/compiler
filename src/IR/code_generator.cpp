@@ -15,7 +15,7 @@ Value::SharedPtr AstProgram::emitSsa(SimpleBlock::SharedPtr simpleBlock)
 
 Value::SharedPtr AstBeginExpr::emitSsa(SimpleBlock::SharedPtr simpleBlock)
 {
-    auto newBlock = std::make_shared<SimpleBlock>(simpleBlock);
+    auto newBlock = SimpleBlock::createWithParent(simpleBlock);
     Value::SharedPtr lastChildProcessed;
     for (auto child : children) {
         lastChildProcessed = child->emitSsa(simpleBlock);
@@ -49,7 +49,7 @@ Value::SharedPtr AstString::emitSsa(SimpleBlock::SharedPtr)
 
 Value::SharedPtr AstProcedureDef::emitSsa(SimpleBlock::SharedPtr simpleBlock)
 {
-    auto newBlock = std::make_shared<SimpleBlock>(simpleBlock);
+    auto newBlock = SimpleBlock::createWithParent(simpleBlock);
     std::vector<RunTimeType::SharedPtr> argsTypes;
     for (size_t i = 0; i < params.size(); ++i) {
         newBlock->symbolTable->addNewVar(params[i]->name, std::make_shared<ProcParameter>(i));
@@ -100,10 +100,30 @@ Value::SharedPtr AstProcedureCall::emitSsa(SimpleBlock::SharedPtr simpleBlock)
 
 Value::SharedPtr AstVarDef::emitSsa(SimpleBlock::SharedPtr simpleBlock)
 {
-    auto varExprProcessed = expr->emitSsa(simpleBlock);
+    const auto varExprProcessed = expr->emitSsa(simpleBlock);
     ASSERT(varExprProcessed);
     simpleBlock->symbolTable->addNewVar(name, varExprProcessed);
     return varExprProcessed;
+}
+
+Value::SharedPtr AstCondIf::emitSsa(SimpleBlock::SharedPtr simpleBlock)
+{
+    const auto exprToTestProcessed = exprToTest->emitSsa(simpleBlock);
+    ASSERT(exprToTestProcessed);
+
+    auto thenBlock = SimpleBlock::createWithParent(simpleBlock);
+    ASSERT(thenExpr->emitSsa(thenBlock));
+
+    SimpleBlock::SharedPtr elseBlock;
+    if (elseExpr) {
+        elseBlock = SimpleBlock::createWithParent(simpleBlock);
+        ASSERT(elseExpr->emitSsa(elseBlock));
+    }
+
+    const auto condJumpInst =
+        std::make_shared<CondJumpInst>(exprToTestProcessed, thenBlock, elseBlock);
+    simpleBlock->insts.push_back(condJumpInst);
+    return condJumpInst;
 }
 
 SimpleBlock::SharedPtr generateIR(AstProgram::SharedPtr astProgram)
@@ -123,6 +143,11 @@ SimpleBlock::SharedPtr generateIR(AstProgram::SharedPtr astProgram)
         std::vector<CompileTimeType::SharedPtr>{CompileTimeType::getNew(TypeID::INT64),
                                                 CompileTimeType::getNew(TypeID::INT64)},
         CompileTimeType::getNew(TypeID::INT64)));
+    mainSymbolTable->addSpecificProcedure(std::make_shared<SpecificProcedure>(
+        ">", "greaterINT64",
+        std::vector<CompileTimeType::SharedPtr>{CompileTimeType::getNew(TypeID::INT64),
+                                                CompileTimeType::getNew(TypeID::INT64)},
+        CompileTimeType::getNew(TypeID::BOOL)));
     astProgram->emitSsa(mainBasicBlock);
     // ssaSeq.symbolTable->addNewProcedure(std::make_shared<Procedure>(
     //     "+", std::vector<Type>{Type(Type::TypeID::UINT64), Type(Type::TypeID::FLOAT)},

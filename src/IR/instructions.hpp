@@ -16,6 +16,7 @@ enum class InstType
     // OPERATION,
     CALL,
     RET,
+    COND_JUMP
 };
 
 class Instruction : public Value
@@ -25,6 +26,10 @@ public:
     virtual ~Instruction() {}
 
     using SharedPtr = std::shared_ptr<Instruction>;
+    void refPretty(std::stringstream &stream) const override
+    {
+        stream << strid;
+    }
 
 protected:
     Instruction(InstType instType_, Type::SharedPtr ty) : Value(ty), instType(instType_) {}
@@ -81,6 +86,22 @@ public:
     void pretty(std::stringstream &stream) const override;
 
     const Value::SharedPtr val;
+};
+
+class CondJumpInst : public Instruction
+{
+public:
+    CondJumpInst(Value::SharedPtr valToTest_, std::shared_ptr<SimpleBlock> thenBlock_,
+                 std::shared_ptr<SimpleBlock> elseBlock_)
+        : Instruction(InstType::COND_JUMP, CompileTimeType::getNew(TypeID::VOID)),
+          valToTest(valToTest_), thenBlock(thenBlock_), elseBlock(elseBlock_)
+    {
+    }
+    void pretty(std::stringstream &stream) const override;
+
+    const Value::SharedPtr valToTest;
+    const std::shared_ptr<SimpleBlock> thenBlock;
+    const std::shared_ptr<SimpleBlock> elseBlock;
 };
 
 #endif // IR_INSTRUCTIONS_HPP

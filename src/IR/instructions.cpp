@@ -1,4 +1,5 @@
-#include "instructions.hpp"
+#include "IR/instructions.hpp"
+#include "IR/block.hpp"
 
 #include <sstream>
 
@@ -9,13 +10,7 @@ void CallInst::pretty(std::stringstream &stream) const // override
         if (argIt != args.begin()) {
             stream << ", ";
         }
-        if (auto constantIntArg = std::dynamic_pointer_cast<ConstantInt>(*argIt)) {
-            constantIntArg->pretty(stream);
-        } else if (auto constantStrArg = std::dynamic_pointer_cast<ConstantString>(*argIt)) {
-            constantStrArg->pretty(stream);
-        } else {
-            stream << (*argIt)->strid;
-        }
+        (*argIt)->refPretty(stream);
     }
     stream << ")";
 }
@@ -23,11 +18,17 @@ void CallInst::pretty(std::stringstream &stream) const // override
 void RetInst::pretty(std::stringstream &stream) const // override
 {
     stream << "ret ";
-    if (auto constantIntArg = std::dynamic_pointer_cast<ConstantInt>(val)) {
-        constantIntArg->pretty(stream);
-    } else if (auto constantStrArg = std::dynamic_pointer_cast<ConstantString>(val)) {
-        constantStrArg->pretty(stream);
-    } else {
-        stream << val->strid;
+    val->refPretty(stream);
+}
+
+void CondJumpInst::pretty(std::stringstream &stream) const // override
+{
+    stream << "CondJump ";
+    elseBlock->refPretty(stream);
+    stream << " ";
+    thenBlock->refPretty(stream);
+    if (elseBlock) {
+        stream << " ";
+        elseBlock->refPretty(stream);
     }
 }

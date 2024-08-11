@@ -166,6 +166,10 @@ public:
           specificProcedures(specificProcedures_)
     {
     }
+    void pretty(std::stringstream &) const override
+    {
+        NOT_IMPLEMENTED;
+    }
 
     const std::string name;
     const std::vector<SpecificProcedure::SharedPtr> specificProcedures;

@@ -19,6 +19,11 @@ public:
     const std::string strid;
     const bool isConstant;
 
+    virtual void refPretty(std::stringstream &stream) const override
+    {
+        stream << strid;
+    }
+
 protected:
     Value(Type::SharedPtr ty_, bool isConstant = false);
 };
@@ -28,6 +33,11 @@ class Constant : public Value
 public:
     using SharedPtr = std::shared_ptr<Constant>;
     using SharedConstPtr = std::shared_ptr<const Constant>;
+
+    void refPretty(std::stringstream &stream) const override
+    {
+        pretty(stream);
+    }
 
 protected:
     Constant(Type::SharedPtr ty_) : Value(ty_, true){};

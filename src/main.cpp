@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
     thompsonConstructor->addRule(LexicalAnalyzerConstructor::allLetters + "+" +
                                      LexicalAnalyzerConstructor::allLettersDigits + "*",
                                  TerminalSymbol::ID);
-    thompsonConstructor->addRule("\\+", TerminalSymbol::ID);
+    thompsonConstructor->addRule("[\\+><(>=)(<=)]", TerminalSymbol::ID);
     thompsonConstructor->addRule(ThompsonConstructor::allDigits + "+", TerminalSymbol::INT);
     thompsonConstructor->addRule(" +", TerminalSymbol::BLANK);
     thompsonConstructor->addRule("\n+", TerminalSymbol::NEWLINE);
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
                                                       {TerminalSymbol::ID},
                                                       {NonTerminalSymbol::LITERAL},
                                                       {NonTerminalSymbol::PROCEDURE_CALL},
-                                                      {NonTerminalSymbol::IF_COND}});
+                                                      {NonTerminalSymbol::COND_IF}});
     syntaxAnalyzer.addRule(NonTerminalSymbol::BEGIN_EXPR,
                            {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::BEGIN,
                             NonTerminalSymbol::EXPRS, TerminalSymbol::CLOSED_BRACKET});
@@ -141,15 +141,15 @@ int main(int argc, char *argv[])
     syntaxAnalyzer.addRule(NonTerminalSymbol::OPERAND, {NonTerminalSymbol::EXPR});
 
     syntaxAnalyzer.addRules(
-        NonTerminalSymbol::IF_COND,
-        {{TerminalSymbol::OPEN_BRACKET, TerminalSymbol::IF, NonTerminalSymbol::IF_COND_TEST,
-          NonTerminalSymbol::IF_COND_BODY, NonTerminalSymbol::IF_COND_ELSE_BODY,
+        NonTerminalSymbol::COND_IF,
+        {{TerminalSymbol::OPEN_BRACKET, TerminalSymbol::IF, NonTerminalSymbol::COND_IF_TEST_EXPR,
+          NonTerminalSymbol::COND_IF_THEN_EXPR, NonTerminalSymbol::COND_IF_ELSE_EXPR,
           TerminalSymbol::CLOSED_BRACKET},
-         {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::IF, NonTerminalSymbol::IF_COND_TEST,
-          NonTerminalSymbol::IF_COND_BODY, TerminalSymbol::CLOSED_BRACKET}});
-    syntaxAnalyzer.addRule(NonTerminalSymbol::IF_COND_TEST, {NonTerminalSymbol::EXPR});
-    syntaxAnalyzer.addRule(NonTerminalSymbol::IF_COND_BODY, {NonTerminalSymbol::EXPR});
-    syntaxAnalyzer.addRule(NonTerminalSymbol::IF_COND_ELSE_BODY, {NonTerminalSymbol::EXPR});
+         {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::IF, NonTerminalSymbol::COND_IF_TEST_EXPR,
+          NonTerminalSymbol::COND_IF_THEN_EXPR, TerminalSymbol::CLOSED_BRACKET}});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::COND_IF_TEST_EXPR, {NonTerminalSymbol::EXPR});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::COND_IF_THEN_EXPR, {NonTerminalSymbol::EXPR});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::COND_IF_ELSE_EXPR, {NonTerminalSymbol::EXPR});
 
     syntaxAnalyzer.addRule(NonTerminalSymbol::VAR_DEF,
                            {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::DEFINE,

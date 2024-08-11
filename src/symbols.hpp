@@ -63,10 +63,10 @@ enum class NonTerminalSymbol
     PROCEDURE_PARAMS,
     PROCEDURE_PARAM,
 
-    IF_COND,
-    IF_COND_TEST,
-    IF_COND_BODY,
-    IF_COND_ELSE_BODY,
+    COND_IF,
+    COND_IF_TEST_EXPR,
+    COND_IF_THEN_EXPR,
+    COND_IF_ELSE_EXPR,
 
     BOOLEAN,
     LIST,

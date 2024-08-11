@@ -15,6 +15,7 @@ enum class TypeID
     INT64,
     FLOAT,
     STRING,
+    BOOL,
     LABEL,
     VOID,
     PROCEDURE
@@ -35,6 +36,11 @@ public:
     // we can always tell if a type is void, because
     // type is never void if it cannot be deduced in compile time
     virtual bool isVoid() const = 0;
+
+    void refPretty(std::stringstream &stream) const override
+    {
+        pretty(stream);
+    }
 
 protected:
     Type() {}

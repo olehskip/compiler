@@ -3,6 +3,7 @@
 #include "log.hpp"
 
 #include <sstream>
+#include <stack>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -11,6 +12,8 @@ enum class Register
     RET,
     FIRST_ARG,
     SECOND_ARG,
+    R11,
+    R12
 };
 
 static Register getRegByArgIdx(uint8_t idx)
@@ -36,6 +39,10 @@ static std::string getRegName(Register reg)
             return "rdi";
         case Register::SECOND_ARG:
             return "rsi";
+        case Register::R11:
+            return "R11";
+        case Register::R12:
+            return "R12";
         default:
             NOT_IMPLEMENTED;
     }
@@ -169,12 +176,15 @@ static void movValueToReg(std::stringstream &body, Value::SharedPtr value, Regis
 
     body << "\n";
 }
+
 // TODO: moke it methods of Instruction
 static void _generateX64Asm(SimpleBlock::SharedPtr simpleBlock, std::stringstream &body,
                             StackAllocator &stackAllocator, RodataAllocator &rodataAllocator,
-                            bool isMain = false)
+                            bool isMain, bool isProcedure)
 {
-    if (!isMain) {
+    if (isMain) {
+        body << "mov rbp, rsp\n";
+    } else if (isProcedure) {
         addProcedurePrologue(body);
     }
     for (auto inst : simpleBlock->insts) {
@@ -198,47 +208,84 @@ static void _generateX64Asm(SimpleBlock::SharedPtr simpleBlock, std::stringstrea
             }
         } else if (auto retInst = std::dynamic_pointer_cast<RetInst>(inst)) {
             movValueToReg(body, retInst->val, Register::RET, stackAllocator, rodataAllocator);
+        } else if (auto condJumpInst = std::dynamic_pointer_cast<CondJumpInst>(inst)) {
+            const auto testReg = Register::R11, oneReg = Register::R12;
+            const auto testRegName = getRegName(testReg), oneRegName = getRegName(oneReg);
+            const std::string thenBlockName = ".if" + condJumpInst->strid + "_then_block";
+            const std::string elseBlockName = ".if" + condJumpInst->strid + "_else_block";
+            const std::string endName = ".if" + condJumpInst->strid + "_end";
+            movValueToReg(body, condJumpInst->valToTest, testReg, stackAllocator, rodataAllocator);
+            body << "mov " << oneRegName << ", 1\n";
+            body << "cmp " << testRegName << ", " << oneRegName << "\n";
+            body << "je " << thenBlockName << "\n";
+            body << "jne " << elseBlockName << "\n";
+
+            StackAllocator thenBlockAllocator;
+            body << thenBlockName << ":\n";
+            _generateX64Asm(condJumpInst->thenBlock, body, thenBlockAllocator, rodataAllocator,
+                            false, false);
+            body << "jmp " << endName << "\n";
+
+            body << elseBlockName << ":\n";
+            if (condJumpInst->elseBlock) {
+                StackAllocator elseBlockAllocator;
+                _generateX64Asm(condJumpInst->elseBlock, body, elseBlockAllocator, rodataAllocator,
+                                false, false);
+            }
+
+            body << endName << ":\n";
+
         } else {
             ASSERT("Not precessed ssa form type");
         }
     }
-    if (!isMain) {
+    if (isMain) {
+        body << "mov rax, 60\n";
+        body << "mov rdi, 0\n";
+        body << "syscall\n";
+    } else if (isProcedure) {
         addProcedureEpilogue(body);
         body << "ret\n";
     }
+
+    body << "\n";
 }
 
 void generateX64Asm(SimpleBlock::SharedPtr mainSimpleBlock, std::stringstream &stream)
 {
     ASSERT(mainSimpleBlock);
-    StackAllocator mainStackAllocator;
-    RodataAllocator rodataAllocator;
 
     std::stringstream header;
     // TODO: make it automatically
+    header << "extern greaterINT64\n";
     header << "extern plusINT64\n";
     header << "extern displayINT64\n";
     header << "extern displaySTRING\n";
-    header << "global _start\n";
+    header << "global _start\n\n";
 
     std::stringstream body;
     body << "section .text\n";
-    auto nextSimpleBlock = mainSimpleBlock;
-    while (nextSimpleBlock) {
+
+    RodataAllocator rodataAllocator;
+    StackAllocator mainStackAllocator;
+    body << "_start:\n";
+    _generateX64Asm(mainSimpleBlock, body, mainStackAllocator, rodataAllocator, true, false);
+
+    std::stack<SimpleBlock::SharedPtr> stack;
+    stack.push(mainSimpleBlock);
+    while (!stack.empty()) {
+        const auto nextSimpleBlock = stack.top();
+        ASSERT(nextSimpleBlock);
+        stack.pop();
         const auto generalProcedureTable =
             nextSimpleBlock->symbolTable->getGeneralProceduresTable();
         for (const auto &[_, procedure] : generalProcedureTable) {
             body << procedure->mangledName << ":\n";
             StackAllocator procedureStackAllocator;
-            _generateX64Asm(procedure->block, body, procedureStackAllocator, rodataAllocator);
+            _generateX64Asm(procedure->block, body, procedureStackAllocator, rodataAllocator, false,
+                            true);
         }
-        // nextSimpleBlock->symbolTable->prc
-        nextSimpleBlock = mainSimpleBlock->parent;
     }
-
-    body << "_start:\n";
-    body << "mov rbp, rsp\n";
-    _generateX64Asm(mainSimpleBlock, body, mainStackAllocator, rodataAllocator, true);
 
     header << "section .rodata\n";
     for (const auto &[value, rodataEntry] : rodataAllocator) {
@@ -248,10 +295,5 @@ void generateX64Asm(SimpleBlock::SharedPtr mainSimpleBlock, std::stringstream &s
         header << rodataEntry.name + " db " + "`" + stringRodata->str + "`,0\n";
     }
 
-    std::stringstream end;
-    end << "mov rax, 60\n";
-    end << "mov rdi, 0\n";
-    end << "syscall\n";
-
-    stream << header.str() << "\n" << body.str() << end.str();
+    stream << header.str() << "\n" << body.str();
 }

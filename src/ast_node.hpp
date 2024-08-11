@@ -147,15 +147,17 @@ class AstCondIf : public AstNode
 public:
     using SharedPtr = std::shared_ptr<AstCondIf>;
 
-    AstCondIf(AstNode::SharedPtr exprToTest_, AstNode::SharedPtr body_,
-              AstNode::SharedPtr elseBody_)
-        : AstNode(AstNodeType::COND_IF), exprToTest(exprToTest_), body(body_), elseBody(elseBody_)
+    AstCondIf(AstNode::SharedPtr exprToTest_, AstNode::SharedPtr thenExpr_,
+              AstNode::SharedPtr elseExpr_)
+        : AstNode(AstNodeType::COND_IF), exprToTest(exprToTest_), thenExpr(thenExpr_),
+          elseExpr(elseExpr_)
     {
     }
+    Value::SharedPtr emitSsa(SimpleBlock::SharedPtr simpleBlock) override;
 
     const AstNode::SharedPtr exprToTest;
-    const AstNode::SharedPtr body;
-    const AstNode::SharedPtr elseBody; // may be nullptr if no else
+    const AstNode::SharedPtr thenExpr;
+    const AstNode::SharedPtr elseExpr; // may be nullptr if no else
 };
 
 #endif // AST_NODE_HPP

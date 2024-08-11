@@ -5,9 +5,24 @@ section .bss
 
 section .text
 
+global greaterINT64
 global displayINT64
 global displaySTRING
 global plusINT64
+
+
+greaterINT64:
+    cmp rdi, rsi
+    jg .then
+    jmp .else
+    
+.then:
+    mov rax, 1
+    ret
+
+.else:
+    mov rax, 0
+    ret
 
 plusINT64:
     mov rax, rdi

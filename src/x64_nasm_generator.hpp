@@ -36,37 +36,19 @@ private:
     const uint64_t offset;
 };
 
-class RoDataRegister : Register
+class ConstantRegister : Register
 {
 public:
-    RoDataRegister(uint64_t id) : name("RODATA_" + std::to_string(id)) {}
-
+    ConstantRegister(uint64_t data_) : data(data_) {}
+    
     std::string getData() const override
     {
-        return "[" + name + "]";
+        return std::to_string(data);
     }
 
-    std::string getPtr() const
-    {
-        return name;
-    }
-
-    const std::string name;
+private:
+    const uint64_t data;
 };
-
-// class ConstantRegister : Register
-// {
-// public:
-//     ConstantRegister(uint64_t data_) : data(data_) {}
-//
-//     std::string getData() const override
-//     {
-//         return std::to_string(data);
-//     }
-//
-// private:
-//     const uint64_t data;
-// };
 
 void generateX64Asm(SimpleBlock::SharedPtr ssaSeq, std::stringstream &stream);
 

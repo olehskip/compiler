@@ -89,7 +89,7 @@ using LOG = Logger;
 #define ASSERT_MSG(pred, msg) \
     if (!(pred))              \
     LOG(LogLevel::ASSERT) << #pred << "; " msg
-#define SHOULD_NOT_HAPPEN LOG(LogLevel::FATAL) << "This should never happen"
-#define NOT_IMPLEMENTED LOG(LogLevel::FATAL) << "Not implemented yet"
+#define SHOULD_NOT_HAPPEN LOG(LogLevel::FATAL) << " this should never happen"
+#define NOT_IMPLEMENTED LOG(LogLevel::FATAL) << " not implemented yet"
 
 #endif // LOG_HPP

@@ -1,47 +1,83 @@
 #ifndef IR_VALUE_HPP
 #define IR_VALUE_HPP
 
-#include "log.hpp"
-#include "type_system.hpp"
-
-#include <optional>
+#include <memory>
+#include <unordered_map>
 #include <vector>
+
+class Type
+{
+public:
+    enum class TypeID
+    {
+        UINT64,
+        FLOAT,
+        LABEL,
+        VOID,
+    };
+    const TypeID typeID;
+    Type(TypeID typeID_) : typeID(typeID_) {}
+
+    bool isNumber()
+    {
+        return typeID == TypeID::UINT64 || typeID == TypeID::FLOAT;
+    }
+};
+
+class TypeManager
+{
+public:
+    TypeManager() {}
+
+    template <class T, std::enable_if<std::is_base_of_v<Type, T>, bool> = true>
+    std::shared_ptr<T> getType()
+    {
+    }
+
+private:
+    std::vector<Type> types;
+};
 
 class Value
 {
 public:
-    Value(Type::SharedPtr ty_) : ty(ty_) {}
+    Value(Type ty_) : ty(ty_) {}
     virtual ~Value() {}
     virtual void pretty(std::stringstream &stream) const = 0;
-    const Type::SharedPtr ty;
+    const Type ty;
     using SharedPtr = std::shared_ptr<Value>;
 };
 
 class ConstantInt : public Value
 {
 public:
-    ConstantInt(int64_t val_) : Value(CompileTimeType::getNew(TypeID::INT64)), val(val_) {}
-    void pretty(std::stringstream &stream) const override;
-
-    const int64_t val;
-};
-
-class ConstantFloat : public Value
-{
-public:
-    ConstantFloat(uint64_t val_) : Value(CompileTimeType::getNew(TypeID::FLOAT)), val(val_) {}
+    ConstantInt(uint64_t val_) : Value(Type::TypeID::UINT64), val(val_) {}
     void pretty(std::stringstream &stream) const override;
 
     const uint64_t val;
 };
 
-class ConstantString : public Value
+class ConstantFloat : public Value
 {
 public:
-    ConstantString(std::string str_) : Value(CompileTimeType::getNew(TypeID::STRING)), str(str_) {}
+    ConstantFloat(uint64_t val_) : Value(Type::TypeID::FLOAT), val(val_) {}
     void pretty(std::stringstream &stream) const override;
 
-    const std::string str;
+    const uint64_t val;
+};
+
+class Procedure : public Value
+{
+public:
+    Procedure(std::string name_, std::vector<Type> argsTypes_, Type returnType)
+        : Value(returnType), name(name_), argsTypes(argsTypes_)
+    {
+    }
+    void pretty(std::stringstream &stream) const override;
+
+    const std::string name;
+    const std::vector<Type> argsTypes;
+    using SharedPtr = std::shared_ptr<Procedure>;
 };
 
 #endif // IR_VALUE_HPP

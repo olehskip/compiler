@@ -38,22 +38,11 @@ public:
     virtual void addRule(std::string rule, TerminalSymbol tokenToReturn) = 0;
     virtual void addRules(std::vector<std::string> rules, TerminalSymbol tokenToReturn) = 0;
 
-    // TODO: this is ugly
     inline static const std::string allLetters =
         "[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]";
     inline static const std::string allDigits = "[0123456789]";
     inline static const std::string allLettersDigits = "[" + allLetters + allDigits + "]";
     inline static const std::string allLettersDigitsSpace = "[" + allLettersDigits + " ]";
-    inline static const std::string everything = "[" + allLettersDigitsSpace +
-                                                 "(\\\\)"
-                                                 "(\\[)"
-                                                 "(\\])"
-                                                 "(\\*)"
-                                                 "(\\+)"
-                                                 "(\\()"
-                                                 "(\\))"
-                                                 "/"
-                                                 "]";
 
 protected:
     friend LexicalAnalyzer;

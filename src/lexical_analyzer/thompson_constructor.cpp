@@ -42,7 +42,7 @@ static inline void addTransition(LexicalVertice *from, LexicalVertice *to,
 
 static bool isAllowedChar(char c)
 {
-    static std::string allowedChars = std::string("_;'\"#/ \n");
+    static std::string allowedChars = std::string("_;'\"# \n");
     return std::isalnum(c) || allowedChars.find(c) != std::string::npos;
 }
 

@@ -13,11 +13,9 @@ enum class AstNodeType
     PROCEDURE_DEF,
     PROCEDURE_CALL,
     VAR_DEF,
-    COND_IF,
     ID,
     INT,
-    FLOAT,
-    STRING
+    FLOAT
 };
 
 class AstNode
@@ -59,35 +57,26 @@ class AstId : public AstNode
 public:
     AstId(std::string name_) : AstNode(AstNodeType::ID), name(name_) {}
 
-    const std::string name;
+    std::string name;
     using SharedPtr = std::shared_ptr<AstId>;
 };
 
 class AstInt : public AstNode
 {
 public:
-    AstInt(int64_t num_) : AstNode(AstNodeType::INT), num(num_) {}
+    AstInt() : AstNode(AstNodeType::INT) {}
 
-    const int64_t num;
+    int64_t num;
     using SharedPtr = std::shared_ptr<AstInt>;
 };
 
 class AstFloat : public AstNode
 {
 public:
-    AstFloat(long double num_) : AstNode(AstNodeType::FLOAT), num(num_) {}
+    AstFloat() : AstNode(AstNodeType::FLOAT) {}
 
-    const long double num;
+    long double num;
     using SharedPtr = std::shared_ptr<AstFloat>;
-};
-
-class AstString : public AstNode
-{
-public:
-    AstString(std::string str_) : AstNode(AstNodeType::STRING), str(str_) {}
-
-    const std::string str;
-    using SharedPtr = std::shared_ptr<AstString>;
 };
 
 class AstProcedureDef : public AstNode
@@ -95,15 +84,11 @@ class AstProcedureDef : public AstNode
 public:
     using SharedPtr = std::shared_ptr<AstProcedureDef>;
 
-    AstProcedureDef(std::string name_, std::vector<AstId::SharedPtr> params_,
-                    AstNode::SharedPtr body_)
-        : AstNode(AstNodeType::PROCEDURE_DEF), name(name_), params(params_), body(body_)
-    {
-    }
+    AstProcedureDef() : AstNode(AstNodeType::PROCEDURE_DEF) {}
 
-    const std::string name;
-    const std::vector<AstId::SharedPtr> params;
-    const AstNode::SharedPtr body;
+    std::string name;
+    std::vector<AstId::SharedPtr> params;
+    AstNode::SharedPtr body;
 };
 
 class AstProcedureCall : public AstNode
@@ -111,13 +96,10 @@ class AstProcedureCall : public AstNode
 public:
     using SharedPtr = std::shared_ptr<AstProcedureCall>;
 
-    AstProcedureCall(std::string name_, std::vector<AstNode::SharedPtr> children_)
-        : AstNode(AstNodeType::PROCEDURE_CALL), name(name_), children(children_)
-    {
-    }
+    AstProcedureCall() : AstNode(AstNodeType::PROCEDURE_CALL) {}
 
-    const std::string name;
-    const std::vector<AstNode::SharedPtr> children;
+    std::string name;
+    std::vector<AstNode::SharedPtr> children;
 };
 
 class AstVarDef : public AstNode
@@ -125,29 +107,10 @@ class AstVarDef : public AstNode
 public:
     using SharedPtr = std::shared_ptr<AstVarDef>;
 
-    AstVarDef(std::string name_, AstNode::SharedPtr expr_)
-        : AstNode(AstNodeType::VAR_DEF), name(name_), expr(expr_)
-    {
-    }
+    AstVarDef() : AstNode(AstNodeType::VAR_DEF) {}
 
-    const std::string name;
-    const AstNode::SharedPtr expr;
-};
-
-class AstCondIf : public AstNode
-{
-public:
-    using SharedPtr = std::shared_ptr<AstCondIf>;
-
-    AstCondIf(AstNode::SharedPtr exprToTest_, AstNode::SharedPtr body_,
-              AstNode::SharedPtr elseBody_)
-        : AstNode(AstNodeType::COND_IF), exprToTest(exprToTest_), body(body_), elseBody(elseBody_)
-    {
-    }
-
-    const AstNode::SharedPtr exprToTest;
-    const AstNode::SharedPtr body;
-    const AstNode::SharedPtr elseBody; // may be nullptr if no else
+    std::string name;
+    AstNode::SharedPtr expr;
 };
 
 #endif // AST_NODE_HPP

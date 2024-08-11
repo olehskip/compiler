@@ -1,7 +1,0 @@
-(define x (+ 1 2))
-(if (= x 3)
-    (display "three")
-    (display "not three")
-)
-
-(display "\n")

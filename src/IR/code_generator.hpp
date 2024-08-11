@@ -14,7 +14,7 @@ class SimpleBlock : public Value
 {
 public:
     using SharedPtr = std::shared_ptr<SimpleBlock>;
-    SimpleBlock() : Value(CompileTimeType::getNew(TypeID::LABEL)) {}
+    SimpleBlock() : Value(Type::TypeID::LABEL) {}
     SimpleBlock::SharedPtr parent;
 
     std::vector<std::shared_ptr<Instruction>> insts;

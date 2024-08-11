@@ -1,6 +1,5 @@
 #include "parser_utils.hpp"
 #include "log.hpp"
-#include "utils.hpp"
 
 #include <stack>
 
@@ -72,24 +71,29 @@ static std::vector<AstId::SharedPtr> processProcedureParams(SymbolSt::SharedPtr 
 
 static AstProcedureDef::SharedPtr processProcedureDef(NonTerminalSymbolSt::SharedPtr node)
 {
+    auto ret = std::make_shared<AstProcedureDef>();
     ASSERT(node->children.size() >= 6); // ( define (PROCEDURE_NAME ARG*) body )
-    const auto name = processName(node->children[3]);
-    std::vector<AstId::SharedPtr> params;
+    ret->name = processName(node->children[3]);
     // TODO: add support for no params
     if (node->children.size() > 6) {
-        params = processProcedureParams(node->children[4]);
-        ASSERT(params.size() > 0);
+        ret->params = processProcedureParams(node->children[4]);
+        ASSERT(ret->params.size() > 0);
     }
-    auto body = extractFromSingleVector(processGeneral(node->children[6]));
-    return std::make_shared<AstProcedureDef>(name, params, body);
+    auto processedBody = processGeneral(node->children[6]);
+    ASSERT(processedBody.size() == 1);
+    ret->body = processedBody.front();
+    return ret;
 }
 
 static AstVarDef::SharedPtr processVarDef(NonTerminalSymbolSt::SharedPtr node)
 {
+    auto ret = std::make_shared<AstVarDef>();
     ASSERT(node->children.size() >= 5); // ( define VAR_NAME EXPR )
-    const auto name = processName(node->children[2]);
-    const auto processedExpr = extractFromSingleVector(processGeneral(node->children[3]));
-    return std::make_shared<AstVarDef>(name, processedExpr);
+    ret->name = processName(node->children[2]);
+    auto processedExprs = processGeneral(node->children[3]);
+    ASSERT(processedExprs.size() == 1);
+    ret->expr = processedExprs.front();
+    return ret;
 }
 
 static std::vector<AstNode::SharedPtr> processOperands(SymbolSt::SharedPtr node)
@@ -118,55 +122,15 @@ static std::vector<AstNode::SharedPtr> processOperands(SymbolSt::SharedPtr node)
 
 static AstProcedureCall::SharedPtr processProcedureCall(NonTerminalSymbolSt::SharedPtr node)
 {
+    auto ret = std::make_shared<AstProcedureCall>();
     ASSERT(node->children.size() >= 3); // ( PROCEDURE_NAME OPERATOR* )
-    const auto name = processName(node->children[1]);
-    std::vector<AstNode::SharedPtr> children;
+    ret->name = processName(node->children[1]);
     if (node->children.size() > 3) {
-        children = processOperands(node->children[2]);
-        ASSERT(children.size() > 0);
+        ret->children = processOperands(node->children[2]);
+        ASSERT(ret->children.size() > 0);
     }
 
-    return std::make_shared<AstProcedureCall>(name, children);
-}
-
-static AstNode::SharedPtr processIfCondTest(SymbolSt::SharedPtr node)
-{
-    auto nonTerminalSt = std::dynamic_pointer_cast<NonTerminalSymbolSt>(node);
-    ASSERT(nonTerminalSt);
-    ASSERT(nonTerminalSt->symbolType == NonTerminalSymbol::IF_COND_TEST);
-    ASSERT(nonTerminalSt->children.size() == 1);
-    return extractFromSingleVector(processGeneral(nonTerminalSt->children[0]));
-}
-
-static AstNode::SharedPtr processIfCondBody(SymbolSt::SharedPtr node)
-{
-    auto nonTerminalSt = std::dynamic_pointer_cast<NonTerminalSymbolSt>(node);
-    ASSERT(nonTerminalSt);
-    ASSERT(nonTerminalSt->symbolType == NonTerminalSymbol::IF_COND_BODY);
-    ASSERT(nonTerminalSt->children.size() == 1);
-    return extractFromSingleVector(processGeneral(nonTerminalSt->children[0]));
-}
-
-static AstNode::SharedPtr processIfCondElseBody(SymbolSt::SharedPtr node)
-{
-    auto nonTerminalSt = std::dynamic_pointer_cast<NonTerminalSymbolSt>(node);
-    ASSERT(nonTerminalSt);
-    ASSERT(nonTerminalSt->symbolType == NonTerminalSymbol::IF_COND_ELSE_BODY);
-    ASSERT(nonTerminalSt->children.size() == 1);
-    return extractFromSingleVector(processGeneral(nonTerminalSt->children[0]));
-}
-static AstCondIf::SharedPtr processCondIf(NonTerminalSymbolSt::SharedPtr node)
-{
-    ASSERT(node->children.size() == 5 ||
-           node->children.size() == 6); // ( if EXPR_TO_TEST BODY ELSE_BODY? )
-    auto exprToTest = processIfCondTest(node->children[2]);
-    auto body = processIfCondBody(node->children[3]);
-    AstNode::SharedPtr elseBody;
-    if (node->children.size() == 6) {
-        elseBody = processIfCondElseBody(node->children[4]);
-    }
-
-    return std::make_shared<AstCondIf>(exprToTest, body, elseBody);
+    return ret;
 }
 
 static std::vector<AstNode::SharedPtr> processGeneral(SymbolSt::SharedPtr node)
@@ -175,10 +139,9 @@ static std::vector<AstNode::SharedPtr> processGeneral(SymbolSt::SharedPtr node)
         if (terminalSt->symbolType == TerminalSymbol::ID) {
             return {std::make_shared<AstId>(terminalSt->text)};
         } else if (terminalSt->symbolType == TerminalSymbol::INT) {
-            return {std::make_shared<AstInt>(std::stoi(terminalSt->text))};
-        } else if (terminalSt->symbolType == TerminalSymbol::STRING) {
-            return {std::make_shared<AstString>(
-                terminalSt->text.substr(1, terminalSt->text.size() - 2))}; // remove quotes
+            auto ret = std::make_shared<AstInt>();
+            ret->num = std::stoi(terminalSt->text);
+            return {ret};
         } else {
             LOG_FATAL << "terminal " + getSymbolName(terminalSt->symbolType) + " not implemented";
         }
@@ -212,11 +175,6 @@ static std::vector<AstNode::SharedPtr> processGeneral(SymbolSt::SharedPtr node)
             }
             case NonTerminalSymbol::VAR_DEF: {
                 auto ret = std::dynamic_pointer_cast<AstNode>(processVarDef(nonTerminalSt));
-                ASSERT(ret);
-                return {ret};
-            }
-            case NonTerminalSymbol::IF_COND: {
-                auto ret = std::dynamic_pointer_cast<AstNode>(processCondIf(nonTerminalSt));
                 ASSERT(ret);
                 return {ret};
             }
@@ -331,21 +289,12 @@ void prettyAst(AstNode::SharedPtr astNode, std::stringstream &stream)
         stream << '"' << "[VAR DEF] " << id << " " << astVarDef->name << '"' << "\n";
         stream << "\t" << '"' << "[VAR DEF] " << id << " " << astVarDef->name << '"' << " -> ";
         prettyAst(astVarDef->expr, stream);
-    } else if (auto astCondIf = std::dynamic_pointer_cast<AstCondIf>(astNode)) {
-        // stream << '"' << "[COND_IF] " << id << '"' << "\n";
-        // // stream << '"' << "[COND_IF] " << id < '"' << "\n";
-        // stream << "\t" << '"' << "[COND_IF] " << id << '"' << " -> ";
-        // for (auto next: {astCondIf->exprToTest, astCondIf->body}) {
-        //     prettyAst(next, stream);
-        // }
     } else if (auto astId = std::dynamic_pointer_cast<AstId>(astNode)) {
         stream << '"' << "[ID] " << id << " " << astId->name << '"' << "\n";
     } else if (auto astInt = std::dynamic_pointer_cast<AstInt>(astNode)) {
         stream << '"' << "[INT] " << id << " " << astInt->num << '"' << "\n";
     } else if (auto astFloat = std::dynamic_pointer_cast<AstFloat>(astNode)) {
         stream << '"' << "[FLOAT] " << id << " " << astFloat->num << '"' << "\n";
-    } else if (auto astString = std::dynamic_pointer_cast<AstString>(astNode)) {
-        stream << '"' << "[STRING] " << id << " " << astString->str << '"' << "\n";
     } else {
         LOG_FATAL << "not processed AST node with type " << astNode->astNodeType;
     }

@@ -1,9 +1,0 @@
-(define x (+ 1 2))
-(cond
-    ((= x 2) (display "two"))
-    ((= x 3) (display "three"))
-    ((= x 4) (display "four"))
-    (#t (display "else"))
-)
-
-(display "\n")

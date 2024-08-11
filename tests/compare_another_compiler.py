@@ -35,21 +35,23 @@ def compile_mine(program, output_folder):
     output_file = os.path.join(output_folder, "output")
     if run_program("./build/compiler_output", program, output_folder) is None:
         return None
-    run_program(
+    if run_program(
         "nasm",
         "-f",
         "elf64",
         os.path.join(output_folder, "output.nasm"),
         "-o",
         os.path.join(output_folder, "output.o"),
-    )
-    run_program(
+        ) is None:
+        return None
+    if run_program(
         "ld",
         os.path.join(output_folder, "output.o"),
         "./build/src/std/CMakeFiles/std.dir/std.asm.o",
         "-o",
         os.path.join(output_folder, "output"),
-    )
+        ) is None:
+        return None
     stdout = run_program(output_file)
     if stdout is not None:
         with open(os.path.join(output_folder, "stdout.txt"), "w") as f:

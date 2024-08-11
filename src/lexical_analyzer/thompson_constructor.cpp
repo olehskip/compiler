@@ -40,12 +40,6 @@ static inline void addTransition(LexicalVertice *from, LexicalVertice *to,
     from->transitions.push_back(Transition{to, transSymbol});
 }
 
-static bool isAllowedChar(char c)
-{
-    static std::string allowedChars = std::string("_;'\"# \n");
-    return std::isalnum(c) || allowedChars.find(c) != std::string::npos;
-}
-
 static RuleSymbol getNextRuleSymbol(std::string_view &rule_view)
 {
     RuleSymbol ret = {std::monostate(), 0};
@@ -55,8 +49,6 @@ static RuleSymbol getNextRuleSymbol(std::string_view &rule_view)
         if (rule_view.size() > 1) {
             ret = {rule_view[1], 2};
         }
-    } else if (isAllowedChar(rule_view[0])) { // TODO: redo it
-        ret = {rule_view[0], 1};
     } else {
         switch (rule_view[0]) {
             case '(': {
@@ -85,6 +77,10 @@ static RuleSymbol getNextRuleSymbol(std::string_view &rule_view)
             }
             case '+': {
                 ret = {MetaRuleSymbol::PLUS, 1};
+                break;
+            }
+            default: {
+                ret = {rule_view[0], 1};
                 break;
             }
         }

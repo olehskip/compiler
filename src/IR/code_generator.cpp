@@ -1,92 +1,154 @@
-#include "code_generator.hpp"
+#include "IR/code_generator.hpp"
+#include "ast_node.hpp"
 #include "log.hpp"
 
+#include <iomanip>
 #include <sstream>
 
-void SimpleBlock::pretty(std::stringstream &stream) const // override
+Value::SharedPtr AstProgram::emitSsa(SimpleBlock::SharedPtr simpleBlock)
 {
-    for (size_t idx = 0; idx < insts.size(); ++idx) {
-        stream << "$" << std::to_string(uint64_t(insts[idx].get())) << " = ";
-        insts[idx]->pretty(stream);
-        stream << "\n";
+    for (auto child : children) {
+        child->emitSsa(simpleBlock);
     }
+    return nullptr;
 }
 
-static Value::SharedPtr _generateSsaEq(AstNode::SharedPtr astNode,
-                                       SimpleBlock::SharedPtr simpleBlock,
-                                       SymbolTable::SharedPtr symbolTable)
+Value::SharedPtr AstBeginExpr::emitSsa(SimpleBlock::SharedPtr simpleBlock)
 {
-    ASSERT(astNode);
-    ASSERT(simpleBlock);
-    if (auto astProgram = std::dynamic_pointer_cast<AstProgram>(astNode)) {
-        for (auto child : astProgram->children) {
-            _generateSsaEq(child, simpleBlock, symbolTable);
-        }
-        return nullptr;
-    } else if (auto astBeginExpr = std::dynamic_pointer_cast<AstBeginExpr>(astNode)) {
-        auto newSymbolTable = std::make_shared<SymbolTable>(symbolTable);
-        Value::SharedPtr lastChildProcessed;
-        for (auto child : astBeginExpr->children) {
-            lastChildProcessed = _generateSsaEq(child, simpleBlock, newSymbolTable);
-        }
-        ASSERT(lastChildProcessed);
-        return lastChildProcessed;
-    } else if (auto astProcedureDef = std::dynamic_pointer_cast<AstProcedureDef>(astNode)) {
-        NOT_IMPLEMENTED;
-    } else if (auto astProcedureCall = std::dynamic_pointer_cast<AstProcedureCall>(astNode)) {
-        const size_t childrenSize = astProcedureCall->children.size();
-        std::vector<Value::SharedPtr> args;
-        std::vector<Type> argsTypes;
-        for (size_t childIdx = 0; childIdx < childrenSize; ++childIdx) {
-            auto childInst =
-                _generateSsaEq(astProcedureCall->children[childIdx], simpleBlock, symbolTable);
-            ASSERT(childInst);
-            args.push_back(childInst);
-            argsTypes.push_back(childInst->ty);
-        }
-        auto procedure = symbolTable->getProcedure(astProcedureCall->name, argsTypes);
-        if (!procedure) {
-            LOG_FATAL << "Can't find procedure with name " << astProcedureCall->name
-                      << " in symbol table";
-        }
-        ASSERT(procedure);
-        auto callInst = std::make_shared<CallInst>(std::shared_ptr<Procedure>(procedure), args,
-                                                   astProcedureCall->name);
-        simpleBlock->insts.push_back(callInst);
-        return callInst;
-    } else if (auto astVarDef = std::dynamic_pointer_cast<AstVarDef>(astNode)) {
-        auto varExprProcessed = _generateSsaEq(astVarDef->expr, simpleBlock, symbolTable);
-        ASSERT(varExprProcessed);
-        symbolTable->addNewVar(astVarDef->name, varExprProcessed);
-        return varExprProcessed;
-    } else if (auto astId = std::dynamic_pointer_cast<AstId>(astNode)) {
-        // TODO: it isn't clean that astId can be only variables
-        auto var = symbolTable->getVar(astId->name);
-        ASSERT_MSG(var, "can't find variable with name = " << astId->name);
-        return var;
-    } else if (auto astInt = std::dynamic_pointer_cast<AstInt>(astNode)) {
-        auto constInt = std::make_shared<ConstantInt>(astInt->num);
-        return constInt;
-    } else if (auto astFloat = std::dynamic_pointer_cast<AstFloat>(astNode)) {
-        auto constFloat = std::make_shared<ConstantFloat>(astFloat->num);
-        return constFloat;
+    auto newBlock = SimpleBlock::createWithParent(simpleBlock);
+    Value::SharedPtr lastChildProcessed;
+    for (auto child : children) {
+        lastChildProcessed = child->emitSsa(simpleBlock);
+    }
+    ASSERT(lastChildProcessed);
+    return lastChildProcessed;
+}
+
+Value::SharedPtr AstId::emitSsa(SimpleBlock::SharedPtr simpleBlock)
+{
+    // TODO: it isn't clear that astId can be only variables
+    auto var = simpleBlock->symbolTable->getVar(name);
+    ASSERT_MSG(var, "Can't find variable with name = " << name);
+    return var;
+}
+
+Value::SharedPtr AstInt::emitSsa(SimpleBlock::SharedPtr)
+{
+    return std::make_shared<ConstantInt>(num);
+}
+
+Value::SharedPtr AstFloat::emitSsa(SimpleBlock::SharedPtr)
+{
+    return std::make_shared<ConstantFloat>(num);
+}
+
+Value::SharedPtr AstString::emitSsa(SimpleBlock::SharedPtr)
+{
+    return std::make_shared<ConstantString>(str);
+}
+
+Value::SharedPtr AstProcedureDef::emitSsa(SimpleBlock::SharedPtr simpleBlock)
+{
+    auto newBlock = SimpleBlock::createWithParent(simpleBlock);
+    std::vector<RunTimeType::SharedPtr> argsTypes;
+    for (size_t i = 0; i < params.size(); ++i) {
+        newBlock->symbolTable->addNewVar(params[i]->name, std::make_shared<ProcParameter>(i));
+        argsTypes.push_back(RunTimeType::getNew());
+    }
+    auto procedureSsa = body->emitSsa(newBlock);
+    if (!procedureSsa->ty->isVoid()) {
+        // TODO: should we return anything if void?
+        // TODO: backend should be flexible, but now we always return the last expr
+        auto retInst = std::make_shared<RetInst>(procedureSsa);
+        newBlock->insts.push_back(retInst);
+        procedureSsa = retInst;
+    }
+    simpleBlock->symbolTable->addGeneralProcedure(
+        std::make_shared<GeneralProcedure>(name, argsTypes, procedureSsa->ty, newBlock));
+    return procedureSsa;
+}
+
+Value::SharedPtr AstProcedureCall::emitSsa(SimpleBlock::SharedPtr simpleBlock)
+{
+    const size_t childrenSize = children.size();
+    std::vector<Value::SharedPtr> args;
+    std::vector<Type::SharedPtr> argsTypes;
+    for (size_t childIdx = 0; childIdx < childrenSize; ++childIdx) {
+        auto childInst = children[childIdx]->emitSsa(simpleBlock);
+        ASSERT(childInst);
+        args.push_back(childInst);
+        argsTypes.push_back(childInst->ty);
     }
 
-    LOG_FATAL << "Not processed AST node with type " << astNode->astNodeType;
+    // check out the comments in IR/procedure.hpp to understand the flow
 
-    return nullptr;
+    Procedure::SharedPtr procedure;
+    if (!containsRunTimeType(argsTypes)) {
+        auto compileTimeArgsTypes = toCompileTimeTypes(argsTypes);
+        procedure = simpleBlock->symbolTable->getSpecificProcedure(name, compileTimeArgsTypes);
+    }
+    if (!procedure) {
+        procedure = simpleBlock->symbolTable->getGeneralProcedure(name);
+    }
+    if (!procedure) {
+        LOG_FATAL << "There is no procedure with name " << std::quoted(name);
+    }
+    auto callInst = std::make_shared<CallInst>(procedure, args);
+    simpleBlock->insts.push_back(callInst);
+    return callInst;
+}
+
+Value::SharedPtr AstVarDef::emitSsa(SimpleBlock::SharedPtr simpleBlock)
+{
+    const auto varExprProcessed = expr->emitSsa(simpleBlock);
+    ASSERT(varExprProcessed);
+    simpleBlock->symbolTable->addNewVar(name, varExprProcessed);
+    return varExprProcessed;
+}
+
+Value::SharedPtr AstCondIf::emitSsa(SimpleBlock::SharedPtr simpleBlock)
+{
+    const auto exprToTestProcessed = exprToTest->emitSsa(simpleBlock);
+    ASSERT(exprToTestProcessed);
+
+    auto thenBlock = SimpleBlock::createWithParent(simpleBlock);
+    ASSERT(thenExpr->emitSsa(thenBlock));
+
+    SimpleBlock::SharedPtr elseBlock;
+    if (elseExpr) {
+        elseBlock = SimpleBlock::createWithParent(simpleBlock);
+        ASSERT(elseExpr->emitSsa(elseBlock));
+    }
+
+    const auto condJumpInst =
+        std::make_shared<CondJumpInst>(exprToTestProcessed, thenBlock, elseBlock);
+    simpleBlock->insts.push_back(condJumpInst);
+    return condJumpInst;
 }
 
 SimpleBlock::SharedPtr generateIR(AstProgram::SharedPtr astProgram)
 {
     auto mainBasicBlock = std::make_shared<SimpleBlock>();
-    auto mainSymbolTable = std::make_shared<SymbolTable>();
-    mainSymbolTable->addNewProcedure(std::make_shared<Procedure>(
-        "display", std::vector<Type>{Type(Type::TypeID::UINT64)}, Type(Type::TypeID::VOID)));
-    mainSymbolTable->addNewProcedure(std::make_shared<Procedure>(
-        "+", std::vector<Type>{Type(Type::TypeID::UINT64), Type(Type::TypeID::UINT64)},
-        Type(Type::TypeID::UINT64)));
-    _generateSsaEq(astProgram, mainBasicBlock, mainSymbolTable);
+    auto mainSymbolTable = mainBasicBlock->symbolTable;
+    mainSymbolTable->addSpecificProcedure(std::make_shared<SpecificProcedure>(
+        "display", "displayINT64",
+        std::vector<CompileTimeType::SharedPtr>{CompileTimeType::getNew(TypeID::INT64)},
+        CompileTimeType::getNew(TypeID::VOID)));
+    mainSymbolTable->addSpecificProcedure(std::make_shared<SpecificProcedure>(
+        "display", "displaySTRING",
+        std::vector<CompileTimeType::SharedPtr>{CompileTimeType::getNew(TypeID::STRING)},
+        CompileTimeType::getNew(TypeID::VOID)));
+    mainSymbolTable->addSpecificProcedure(std::make_shared<SpecificProcedure>(
+        "+", "plusINT64",
+        std::vector<CompileTimeType::SharedPtr>{CompileTimeType::getNew(TypeID::INT64),
+                                                CompileTimeType::getNew(TypeID::INT64)},
+        CompileTimeType::getNew(TypeID::INT64)));
+    mainSymbolTable->addSpecificProcedure(std::make_shared<SpecificProcedure>(
+        ">", "greaterINT64",
+        std::vector<CompileTimeType::SharedPtr>{CompileTimeType::getNew(TypeID::INT64),
+                                                CompileTimeType::getNew(TypeID::INT64)},
+        CompileTimeType::getNew(TypeID::BOOL)));
+    astProgram->emitSsa(mainBasicBlock);
     // ssaSeq.symbolTable->addNewProcedure(std::make_shared<Procedure>(
     //     "+", std::vector<Type>{Type(Type::TypeID::UINT64), Type(Type::TypeID::FLOAT)},
     //     Type(Type::TypeID::FLOAT)));

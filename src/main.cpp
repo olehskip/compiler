@@ -58,12 +58,16 @@ int main(int argc, char *argv[])
     const std::string inputPath = argv[1], outputPath = argv[2];
     std::cout << "Input file path = " << inputPath << "\n";
     std::cout << "Output folder path = " << outputPath << "\n";
+    if (std::filesystem::remove_all(outputPath)) {
+        std::cout << "Deleted output folder\n";
+    }
+
     const bool outputDirectoryWasCreated = std::filesystem::create_directories(outputPath);
     ASSERT(outputDirectoryWasCreated);
 
     std::shared_ptr<ThompsonConstructor> thompsonConstructor =
         std::make_shared<ThompsonConstructor>();
-    thompsonConstructor->addRule(";" + thompsonConstructor->allLettersDigitsSpace + "*\n",
+    thompsonConstructor->addRule(";" + thompsonConstructor->everything + "*\n",
                                  TerminalSymbol::COMMENT);
     thompsonConstructor->addRule("#[tT]", TerminalSymbol::TRUE_LIT);
     thompsonConstructor->addRule("#[fF]", TerminalSymbol::FALSE_LIT);
@@ -71,17 +75,18 @@ int main(int argc, char *argv[])
     thompsonConstructor->addRule("\\)", TerminalSymbol::CLOSED_BRACKET);
     thompsonConstructor->addRule("#\\\\" + ThompsonConstructor::allLetters,
                                  TerminalSymbol::CHARACTER);
-    thompsonConstructor->addRule("\"" + LexicalAnalyzerConstructor::allLettersDigits + "+\"",
+    thompsonConstructor->addRule("\"" + LexicalAnalyzerConstructor::everything + "+\"",
                                  TerminalSymbol::STRING);
     thompsonConstructor->addRule("'" + LexicalAnalyzerConstructor::allLettersDigits + "+",
                                  TerminalSymbol::SYMBOL);
     thompsonConstructor->addRule("define", TerminalSymbol::DEFINE);
     thompsonConstructor->addRule("begin", TerminalSymbol::BEGIN);
+    thompsonConstructor->addRule("if", TerminalSymbol::IF);
     thompsonConstructor->addRule(LexicalAnalyzerConstructor::allLetters + "+" +
                                      LexicalAnalyzerConstructor::allLettersDigits + "*",
                                  TerminalSymbol::ID);
-    thompsonConstructor->addRule("\\+", TerminalSymbol::ID);
-    thompsonConstructor->addRule(ThompsonConstructor::allDigits, TerminalSymbol::INT);
+    thompsonConstructor->addRule("[\\+><(>=)(<=)]", TerminalSymbol::ID);
+    thompsonConstructor->addRule(ThompsonConstructor::allDigits + "+", TerminalSymbol::INT);
     thompsonConstructor->addRule(" +", TerminalSymbol::BLANK);
     thompsonConstructor->addRule("\n+", TerminalSymbol::NEWLINE);
     std::cout << "Lexer rules were added\n";
@@ -96,7 +101,6 @@ int main(int argc, char *argv[])
     syntaxAnalyzer.addRules(NonTerminalSymbol::START,
                             {{NonTerminalSymbol::PROCEDURE_DEF}, {NonTerminalSymbol::EXPR}});
 
-    // TODO: maybe move BEGIN_EXPR under EXPR?
     syntaxAnalyzer.addRules(
         NonTerminalSymbol::EXPRS,
         {{NonTerminalSymbol::EXPRS, NonTerminalSymbol::EXPR}, {NonTerminalSymbol::EXPR}});
@@ -104,7 +108,8 @@ int main(int argc, char *argv[])
                                                       {NonTerminalSymbol::VAR_DEF},
                                                       {TerminalSymbol::ID},
                                                       {NonTerminalSymbol::LITERAL},
-                                                      {NonTerminalSymbol::PROCEDURE_CALL}});
+                                                      {NonTerminalSymbol::PROCEDURE_CALL},
+                                                      {NonTerminalSymbol::COND_IF}});
     syntaxAnalyzer.addRule(NonTerminalSymbol::BEGIN_EXPR,
                            {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::BEGIN,
                             NonTerminalSymbol::EXPRS, TerminalSymbol::CLOSED_BRACKET});
@@ -114,6 +119,11 @@ int main(int argc, char *argv[])
                             TerminalSymbol::OPEN_BRACKET, TerminalSymbol::ID,
                             NonTerminalSymbol::PROCEDURE_PARAMS, TerminalSymbol::CLOSED_BRACKET,
                             NonTerminalSymbol::EXPR, TerminalSymbol::CLOSED_BRACKET});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::PROCEDURE_DEF,
+                           {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::DEFINE,
+                            TerminalSymbol::OPEN_BRACKET, TerminalSymbol::ID,
+                            TerminalSymbol::CLOSED_BRACKET, NonTerminalSymbol::EXPR,
+                            TerminalSymbol::CLOSED_BRACKET});
     syntaxAnalyzer.addRules(
         NonTerminalSymbol::PROCEDURE_PARAMS,
         {{NonTerminalSymbol::PROCEDURE_PARAMS, NonTerminalSymbol::PROCEDURE_PARAM},
@@ -122,10 +132,24 @@ int main(int argc, char *argv[])
     syntaxAnalyzer.addRule(NonTerminalSymbol::PROCEDURE_CALL,
                            {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::ID,
                             NonTerminalSymbol::OPERANDS, TerminalSymbol::CLOSED_BRACKET});
+    syntaxAnalyzer.addRule(
+        NonTerminalSymbol::PROCEDURE_CALL,
+        {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::ID, TerminalSymbol::CLOSED_BRACKET});
     syntaxAnalyzer.addRules(
         NonTerminalSymbol::OPERANDS,
         {{NonTerminalSymbol::OPERANDS, NonTerminalSymbol::OPERAND}, {NonTerminalSymbol::OPERAND}});
     syntaxAnalyzer.addRule(NonTerminalSymbol::OPERAND, {NonTerminalSymbol::EXPR});
+
+    syntaxAnalyzer.addRules(
+        NonTerminalSymbol::COND_IF,
+        {{TerminalSymbol::OPEN_BRACKET, TerminalSymbol::IF, NonTerminalSymbol::COND_IF_TEST_EXPR,
+          NonTerminalSymbol::COND_IF_THEN_EXPR, NonTerminalSymbol::COND_IF_ELSE_EXPR,
+          TerminalSymbol::CLOSED_BRACKET},
+         {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::IF, NonTerminalSymbol::COND_IF_TEST_EXPR,
+          NonTerminalSymbol::COND_IF_THEN_EXPR, TerminalSymbol::CLOSED_BRACKET}});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::COND_IF_TEST_EXPR, {NonTerminalSymbol::EXPR});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::COND_IF_THEN_EXPR, {NonTerminalSymbol::EXPR});
+    syntaxAnalyzer.addRule(NonTerminalSymbol::COND_IF_ELSE_EXPR, {NonTerminalSymbol::EXPR});
 
     syntaxAnalyzer.addRule(NonTerminalSymbol::VAR_DEF,
                            {TerminalSymbol::OPEN_BRACKET, TerminalSymbol::DEFINE,
@@ -170,6 +194,5 @@ int main(int argc, char *argv[])
     generateX64Asm(ssaSeq, nasm);
     saveNasm(nasm, outputPath + "/output.nasm");
     std::cout << "Nasm code was saved\n";
-
     return 0;
 }

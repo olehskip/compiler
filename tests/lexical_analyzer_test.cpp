@@ -460,6 +460,16 @@ TEST(EscapedSymbols, EscapedCloseBracketMatchesCloseBracket)
     EXPECT_EQ(parseRes[0]->text, "]");
 }
 
+TEST(EscapedSymbols, EscapedTwoBracketsMatchesItself)
+{
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("\\[\\]", TerminalSymbol::ASSIGN_OP);
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse("[]");
+    ASSERT_EQ(parseRes.size(), 1);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
+    EXPECT_EQ(parseRes[0]->text, "[]");
+}
+
 TEST(EscapedSymbols, EscapedAsterixMatchesAsterix)
 {
     auto lexConstructor = std::make_shared<ThompsonConstructor>();
@@ -490,7 +500,7 @@ TEST(EscapedSymbols, EscapedBackslashMatchesBackslash)
     EXPECT_EQ(parseRes[0]->text, "\\");
 }
 
-TEST(EscapedSymbols, EscapedBackslashWithLettersMatchesBackslashWithLetters)
+TEST(EscapedSymbols, EscapedBackslashWithLettersMatchesItself)
 {
     auto lexConstructor = std::make_shared<ThompsonConstructor>();
     lexConstructor->addRule("a\\\\b", TerminalSymbol::ASSIGN_OP);
@@ -498,6 +508,40 @@ TEST(EscapedSymbols, EscapedBackslashWithLettersMatchesBackslashWithLetters)
     ASSERT_EQ(parseRes.size(), 1);
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
     EXPECT_EQ(parseRes[0]->text, "a\\b");
+}
+
+TEST(EscapedSymbols, EscapedBackslashInQuotesMatchesItself)
+{
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("\"\\\\\"", TerminalSymbol::ASSIGN_OP);
+    const std::string toParse = "\"\\\"";
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
+    ASSERT_EQ(parseRes.size(), 1);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
+    EXPECT_EQ(parseRes[0]->text, toParse);
+}
+
+TEST(EscapedSymbols, EscapedBackslashWithLettersInQuotesMatchesItself)
+{
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("\"a\\\\b\"", TerminalSymbol::ASSIGN_OP);
+    const std::string toParse = "\"a\\b\"";
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
+    ASSERT_EQ(parseRes.size(), 1);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
+    EXPECT_EQ(parseRes[0]->text, toParse);
+}
+
+// TODO: Move tests from Misc to somewhere else or rename it
+TEST(Misc, LettersInQuotes)
+{
+    auto lexConstructor = std::make_shared<ThompsonConstructor>();
+    lexConstructor->addRule("\"abc\"", TerminalSymbol::ASSIGN_OP);
+    const std::string toParse = "\"abc\"";
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
+    ASSERT_EQ(parseRes.size(), 1);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::ASSIGN_OP);
+    EXPECT_EQ(parseRes[0]->text, toParse);
 }
 
 // ====== Real tokens ======
@@ -513,11 +557,13 @@ protected:
         lexConstructor->addRule(ThompsonConstructor::allDigits + "+", TerminalSymbol::INT);
         lexConstructor->addRule(" ", TerminalSymbol::BLANK);
         lexConstructor->addRule("\n", TerminalSymbol::NEWLINE);
-        lexConstructor->addRule(";" + ThompsonConstructor::allLettersDigitsSpace + "+\n",
+        lexConstructor->addRule(";" + ThompsonConstructor::everything + "+\n",
                                 TerminalSymbol::COMMENT);
         lexConstructor->addRule("#\\\\" + LexicalAnalyzerConstructor::allLetters + "+",
                                 TerminalSymbol::CHARACTER);
         lexConstructor->addRule("define", TerminalSymbol::DEFINE);
+        lexConstructor->addRule("\"" + LexicalAnalyzerConstructor::everything + "+\"",
+                                TerminalSymbol::STRING);
     }
     std::shared_ptr<LexicalAnalyzerConstructor> lexConstructor;
 };
@@ -565,6 +611,15 @@ TEST_F(RealTokens, Comment)
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::COMMENT);
 }
 
+TEST_F(RealTokens, DifficultComment)
+{
+    const std::string toParse = "; 123 []()*+ this is a comment 1234234\n";
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
+    ASSERT_EQ(parseRes.size(), 1);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::COMMENT);
+    EXPECT_EQ(parseRes[0]->text, toParse);
+}
+
 TEST_F(RealTokens, CommentAmongTokens)
 {
     const std::string toParse = "1\n; 123 this is a comment 1234234\n34";
@@ -576,7 +631,7 @@ TEST_F(RealTokens, CommentAmongTokens)
     EXPECT_EQ(parseRes[3]->symbolType, TerminalSymbol::INT);
 }
 
-TEST_F(RealTokens, MatchKeyword)
+TEST_F(RealTokens, MatchDefineKeyword)
 {
     const std::string toParse = "1 define";
     const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
@@ -584,6 +639,30 @@ TEST_F(RealTokens, MatchKeyword)
     EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::INT);
     EXPECT_EQ(parseRes[1]->symbolType, TerminalSymbol::BLANK);
     EXPECT_EQ(parseRes[2]->symbolType, TerminalSymbol::DEFINE);
+}
+
+TEST_F(RealTokens, MatchString)
+{
+    const std::string toParse = "1 define \"some string\"";
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
+    ASSERT_EQ(parseRes.size(), 5);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::INT);
+    EXPECT_EQ(parseRes[1]->symbolType, TerminalSymbol::BLANK);
+    EXPECT_EQ(parseRes[2]->symbolType, TerminalSymbol::DEFINE);
+    EXPECT_EQ(parseRes[3]->symbolType, TerminalSymbol::BLANK);
+    EXPECT_EQ(parseRes[4]->symbolType, TerminalSymbol::STRING);
+}
+
+TEST_F(RealTokens, MatchStringWithNewline)
+{
+    const std::string toParse = "1 define \"some\\nstring\"";
+    const auto parseRes = LexicalAnalyzer(lexConstructor).parse(toParse);
+    ASSERT_EQ(parseRes.size(), 5);
+    EXPECT_EQ(parseRes[0]->symbolType, TerminalSymbol::INT);
+    EXPECT_EQ(parseRes[1]->symbolType, TerminalSymbol::BLANK);
+    EXPECT_EQ(parseRes[2]->symbolType, TerminalSymbol::DEFINE);
+    EXPECT_EQ(parseRes[3]->symbolType, TerminalSymbol::BLANK);
+    EXPECT_EQ(parseRes[4]->symbolType, TerminalSymbol::STRING);
 }
 
 int main(int argc, char **argv)

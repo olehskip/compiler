@@ -5,6 +5,10 @@
 #include <string>
 #include <vector>
 
+#include "IR/block.hpp"
+#include "IR/symbol_table.hpp"
+#include "log.hpp"
+
 enum class AstNodeType
 {
     UKNOWN,
@@ -12,10 +16,12 @@ enum class AstNodeType
     BEGIN_EXPR,
     PROCEDURE_DEF,
     PROCEDURE_CALL,
+    COND_IF,
     VAR_DEF,
     ID,
     INT,
-    FLOAT
+    FLOAT,
+    STRING
 };
 
 class AstNode
@@ -25,6 +31,11 @@ public:
     virtual ~AstNode() {}
 
     AstNode(AstNodeType astNodeType_ = AstNodeType::UKNOWN) : astNodeType(astNodeType_) {}
+    virtual Value::SharedPtr emitSsa(SimpleBlock::SharedPtr /* simpleBlock */)
+    {
+        NOT_IMPLEMENTED;
+        return nullptr;
+    };
 
     AstNode::SharedPtr parent;
 
@@ -38,6 +49,7 @@ public:
     using SharedPtr = std::shared_ptr<AstProgram>;
 
     AstProgram() : AstNode(AstNodeType::PROGRAM) {}
+    Value::SharedPtr emitSsa(SimpleBlock::SharedPtr simpleBlock) override;
 
     std::vector<AstNode::SharedPtr> children;
 };
@@ -48,6 +60,7 @@ public:
     using SharedPtr = std::shared_ptr<AstBeginExpr>;
 
     AstBeginExpr() : AstNode(AstNodeType::BEGIN_EXPR) {}
+    Value::SharedPtr emitSsa(SimpleBlock::SharedPtr simpleBlock) override;
 
     std::vector<AstNode::SharedPtr> children;
 };
@@ -56,27 +69,40 @@ class AstId : public AstNode
 {
 public:
     AstId(std::string name_) : AstNode(AstNodeType::ID), name(name_) {}
+    Value::SharedPtr emitSsa(SimpleBlock::SharedPtr simpleBlock) override;
 
-    std::string name;
+    const std::string name;
     using SharedPtr = std::shared_ptr<AstId>;
 };
 
 class AstInt : public AstNode
 {
 public:
-    AstInt() : AstNode(AstNodeType::INT) {}
+    AstInt(int64_t num_) : AstNode(AstNodeType::INT), num(num_) {}
+    Value::SharedPtr emitSsa(SimpleBlock::SharedPtr simpleBlock) override;
 
-    int64_t num;
+    const int64_t num;
     using SharedPtr = std::shared_ptr<AstInt>;
 };
 
 class AstFloat : public AstNode
 {
 public:
-    AstFloat() : AstNode(AstNodeType::FLOAT) {}
+    AstFloat(long double num_) : AstNode(AstNodeType::FLOAT), num(num_) {}
+    Value::SharedPtr emitSsa(SimpleBlock::SharedPtr simpleBlock) override;
 
-    long double num;
+    const long double num;
     using SharedPtr = std::shared_ptr<AstFloat>;
+};
+
+class AstString : public AstNode
+{
+public:
+    AstString(std::string str_) : AstNode(AstNodeType::STRING), str(str_) {}
+    Value::SharedPtr emitSsa(SimpleBlock::SharedPtr simpleBlock) override;
+
+    const std::string str;
+    using SharedPtr = std::shared_ptr<AstString>;
 };
 
 class AstProcedureDef : public AstNode
@@ -85,6 +111,7 @@ public:
     using SharedPtr = std::shared_ptr<AstProcedureDef>;
 
     AstProcedureDef() : AstNode(AstNodeType::PROCEDURE_DEF) {}
+    Value::SharedPtr emitSsa(SimpleBlock::SharedPtr simpleBlock) override;
 
     std::string name;
     std::vector<AstId::SharedPtr> params;
@@ -97,6 +124,7 @@ public:
     using SharedPtr = std::shared_ptr<AstProcedureCall>;
 
     AstProcedureCall() : AstNode(AstNodeType::PROCEDURE_CALL) {}
+    Value::SharedPtr emitSsa(SimpleBlock::SharedPtr simpleBlock) override;
 
     std::string name;
     std::vector<AstNode::SharedPtr> children;
@@ -108,9 +136,28 @@ public:
     using SharedPtr = std::shared_ptr<AstVarDef>;
 
     AstVarDef() : AstNode(AstNodeType::VAR_DEF) {}
+    Value::SharedPtr emitSsa(SimpleBlock::SharedPtr simpleBlock) override;
 
     std::string name;
     AstNode::SharedPtr expr;
+};
+
+class AstCondIf : public AstNode
+{
+public:
+    using SharedPtr = std::shared_ptr<AstCondIf>;
+
+    AstCondIf(AstNode::SharedPtr exprToTest_, AstNode::SharedPtr thenExpr_,
+              AstNode::SharedPtr elseExpr_)
+        : AstNode(AstNodeType::COND_IF), exprToTest(exprToTest_), thenExpr(thenExpr_),
+          elseExpr(elseExpr_)
+    {
+    }
+    Value::SharedPtr emitSsa(SimpleBlock::SharedPtr simpleBlock) override;
+
+    const AstNode::SharedPtr exprToTest;
+    const AstNode::SharedPtr thenExpr;
+    const AstNode::SharedPtr elseExpr; // may be nullptr if no else
 };
 
 #endif // AST_NODE_HPP

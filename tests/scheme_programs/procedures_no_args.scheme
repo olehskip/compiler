@@ -1,0 +1,4 @@
+(define (helloworld) (display "helloworld"))
+(helloworld)
+(define (helloworld2) (begin (helloworld) (helloworld)))
+(helloworld2)

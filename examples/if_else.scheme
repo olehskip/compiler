@@ -1,0 +1,10 @@
+(define x 10)
+
+(if (> x 10)
+    (display "x is greater than 10")
+    (display "x is not greater than 10"))
+
+(if (> x 9)
+    (display "x is greater than 9")
+    (display "x is not greater than 9"))
+

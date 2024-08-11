@@ -2,6 +2,7 @@
 #include "log.hpp"
 #include "utils.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <set>
@@ -372,7 +373,11 @@ void prettySt(SymbolSt::SharedPtr stNode, std::stringstream &stream)
         }
     } else if (auto terminalSymbolSt = std::dynamic_pointer_cast<TerminalSymbolSt>(stNode)) {
         const auto symbolName = getSymbolName(terminalSymbolSt->symbolType);
-        stream << "\t" << '"' << symbolName << " " << terminalSymbolSt->text << " " << id << '"';
+        const auto symbolText =
+            (terminalSymbolSt->symbolType == TerminalSymbol::STRING
+                 ? terminalSymbolSt->text.substr(1, terminalSymbolSt->text.size() - 2)
+                 : terminalSymbolSt->text); // TODO: this is ugly
+        stream << '"' << symbolName << " '" << symbolText << "' " << id << '"' << "\n";
     } else {
         SHOULD_NOT_HAPPEN;
     }

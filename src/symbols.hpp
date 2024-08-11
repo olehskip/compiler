@@ -25,6 +25,7 @@ enum class TerminalSymbol
     ID,
     DEFINE,
     BEGIN,
+    IF,
 
     FINISH,
 
@@ -62,7 +63,10 @@ enum class NonTerminalSymbol
     PROCEDURE_PARAMS,
     PROCEDURE_PARAM,
 
-    DEFINITION,
+    COND_IF,
+    COND_IF_TEST_EXPR,
+    COND_IF_THEN_EXPR,
+    COND_IF_ELSE_EXPR,
 
     BOOLEAN,
     LIST,

@@ -1,83 +1,75 @@
 #ifndef IR_VALUE_HPP
 #define IR_VALUE_HPP
 
-#include <memory>
-#include <unordered_map>
+#include "log.hpp"
+#include "type_system.hpp"
+
+#include <optional>
 #include <vector>
 
-class Type
+class Value : public Printable
 {
 public:
-    enum class TypeID
-    {
-        UINT64,
-        FLOAT,
-        LABEL,
-        VOID,
-    };
-    const TypeID typeID;
-    Type(TypeID typeID_) : typeID(typeID_) {}
-
-    bool isNumber()
-    {
-        return typeID == TypeID::UINT64 || typeID == TypeID::FLOAT;
-    }
-};
-
-class TypeManager
-{
-public:
-    TypeManager() {}
-
-    template <class T, std::enable_if<std::is_base_of_v<Type, T>, bool> = true>
-    std::shared_ptr<T> getType()
-    {
-    }
-
-private:
-    std::vector<Type> types;
-};
-
-class Value
-{
-public:
-    Value(Type ty_) : ty(ty_) {}
     virtual ~Value() {}
-    virtual void pretty(std::stringstream &stream) const = 0;
-    const Type ty;
+    const Type::SharedPtr ty;
     using SharedPtr = std::shared_ptr<Value>;
+    using SharedConstPtr = std::shared_ptr<const Value>;
+
+    const uint64_t id;
+    const std::string strid;
+    const bool isConstant;
+
+    virtual void refPretty(std::stringstream &stream) const override
+    {
+        stream << strid;
+    }
+
+protected:
+    Value(Type::SharedPtr ty_, bool isConstant = false);
 };
 
-class ConstantInt : public Value
+class Constant : public Value
 {
 public:
-    ConstantInt(uint64_t val_) : Value(Type::TypeID::UINT64), val(val_) {}
+    using SharedPtr = std::shared_ptr<Constant>;
+    using SharedConstPtr = std::shared_ptr<const Constant>;
+
+    void refPretty(std::stringstream &stream) const override
+    {
+        pretty(stream);
+    }
+
+protected:
+    Constant(Type::SharedPtr ty_) : Value(ty_, true){};
+};
+
+class ConstantInt : public Constant
+{
+public:
+    ConstantInt(int64_t val_) : Constant(CompileTimeType::getNew(TypeID::INT64)), val(val_) {}
+    void pretty(std::stringstream &stream) const override;
+
+    const int64_t val;
+};
+
+class ConstantFloat : public Constant
+{
+public:
+    ConstantFloat(uint64_t val_) : Constant(CompileTimeType::getNew(TypeID::FLOAT)), val(val_) {}
     void pretty(std::stringstream &stream) const override;
 
     const uint64_t val;
 };
 
-class ConstantFloat : public Value
+class ConstantString : public Constant
 {
 public:
-    ConstantFloat(uint64_t val_) : Value(Type::TypeID::FLOAT), val(val_) {}
-    void pretty(std::stringstream &stream) const override;
-
-    const uint64_t val;
-};
-
-class Procedure : public Value
-{
-public:
-    Procedure(std::string name_, std::vector<Type> argsTypes_, Type returnType)
-        : Value(returnType), name(name_), argsTypes(argsTypes_)
+    ConstantString(std::string str_) : Constant(CompileTimeType::getNew(TypeID::STRING)), str(str_)
     {
     }
     void pretty(std::stringstream &stream) const override;
 
-    const std::string name;
-    const std::vector<Type> argsTypes;
-    using SharedPtr = std::shared_ptr<Procedure>;
+    const std::string str;
 };
 
 #endif // IR_VALUE_HPP
